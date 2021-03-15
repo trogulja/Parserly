@@ -5,9 +5,12 @@ const getFiles = require('./getFiles');
 const config = require('./lib/config');
 const fns = require('./actions');
 const { writeNames, writeDays, writeImages } = require('./lib/db/tools');
+const { roughSizeOfObject, humanFileSize } = require('./lib/util/extras');
 
 function getDateNum(d) {
-  return `${d.getFullYear()}${d.getMonth() + 1 < 10 ? '0' : ''}${d.getMonth() + 1}${d.getDate() < 10 ? '0' : ''}${d.getDate()}`;
+  return `${d.getFullYear()}${d.getMonth() + 1 < 10 ? '0' : ''}${d.getMonth() + 1}${
+    d.getDate() < 10 ? '0' : ''
+  }${d.getDate()}`;
 }
 
 function writeout(s, sameline) {
@@ -161,7 +164,7 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
 
 function parseFile(inputFile, po) {
   return new Promise((resolve, reject) => {
-    const file = new LineByLineReader(inputFile.path, {encoding:'utf8'});
+    const file = new LineByLineReader(inputFile.path, { encoding: 'utf8' });
     let lineNr = 0;
     const report = setInterval(() => {
       jobStatus(lineNr, inputFile.lines);
@@ -256,17 +259,39 @@ async function main(inputFolder) {
   for (const file of files) {
     writeout(`Parsing ${file.name}`);
     await parseFile(file, po);
-    new Date().getFullYear();
-    console.log(getDateNum(file.firstDate), ' - ', getDateNum(file.lastDate));
-    console.log([...po.days].sort());
+    // console.log(getDateNum(file.firstDate), ' - ', getDateNum(file.lastDate));
+    // console.log([...po.days].sort());
     for (const key in po.output) {
-      console.log({ [key]: po.output[key].length });
+      if (po.output[key].length) console.log({ [key]: po.output[key].length });
     }
-  }
+    const dbResult1 = writeNames(po.names);
+    console.log(
+      `Colected ${po.names.size} names, written ${dbResult1.reduce((acc, val) => acc + val.changes, 0)} in db.`
+    );
+    if (!!dbResult1) {
+      po.names.clear();
+    }
 
-  const dbResult1 = writeNames(po.names);
-  const dbResult2 = writeDays(po.days);
-  const dbResult3 = writeImages(po.output);
+    const dbResult2 = writeDays(po.days);
+    console.log(
+      `Colected ${po.days.size} days, written ${dbResult2.reduce((acc, val) => acc + val.changes, 0)} in db.`
+    );
+    if (!!dbResult2) po.days.clear();
+
+    const dbResult3 = writeImages(po.output);
+    if (dbResult3) {
+      // delete po.output.pObj;
+      po.output.pObj = [];
+      // delete po.output.pImg;
+      po.output.pImg = [];
+      // delete po.output.pIns;
+      po.output.pIns = [];
+      po.output.purge = [];
+      po.output.route = [];
+    }
+
+    console.log(`po is roughly ${humanFileSize(roughSizeOfObject(po))}`);
+  }
 
   // console.log(dbResult1, dbResult2);
 

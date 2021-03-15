@@ -304,14 +304,14 @@ const concludePImg = (po, line) => {
     t_start: po.detected.pImg.t_start,
     t_end: po.detected.pImg.t_end,
     duration: po.detected.pImg.duration,
-    imageName: po.detected.pImg.imageName,
     day: po.detected.pImg.day,
+    imageName: po.detected.pImg.imageName,
+    channelName: po.detected.pImg.channelName,
     numSteps: po.detected.pImg.numSteps,
     numErrors: po.detected.pImg.numErrors,
     inspectID: po.detected.pImg.inspectID,
-    error: po.detected.pImg.error,
     threadID: po.detected.pImg.threadID,
-    channelName: po.detected.pImg.channelName,
+    error: po.detected.pImg.error,
   });
 
   for (const key in po.detected.pImg) {
@@ -367,8 +367,8 @@ const concludePObj = (po, line) => {
     t_start: po.detected.pObj.t_start,
     t_end: po.detected.pObj.t_end,
     duration: po.detected.pObj.duration,
-    objectName: po.detected.pObj.objectName,
     day: po.detected.pObj.day,
+    objectName: po.detected.pObj.objectName,
     channelName: po.detected.pObj.channelName,
     numSteps: po.detected.pObj.numSteps,
     numErrors: po.detected.pObj.numErrors,
@@ -399,14 +399,14 @@ const inspected = (line, matched, po) => {
 
   po.detected.pIns = {
     t_start: new Date(m[YY], m[MM] - 1, m[DD], m[hh], m[mm], m[ss], m[ms]).getTime(),
-    psTime: Number(m[iInspectDuration]),
-    calcTime: calcInspectTime(Number(m[iInspectDuration])),
-    userName: m[iUser],
     day: Number(`${m[YY]}${m[MM]}${m[DD]}`),
     imageName: path.parse(m[iFilename]).name,
-    inspectID: Number(m[iInspectID]),
     channelName: m[iChannel],
+    userName: m[iUser],
     inspectAction: m[iInspectAction],
+    psTime: Number(m[iInspectDuration]),
+    calcTime: m[iInspectDuration] === undefined ? calcInspectTime(-1) : calcInspectTime(Number(m[iInspectDuration])),
+    inspectID: Number(m[iInspectID]),
   };
 
   if (po.detected.pIns.userName) po.names.add(po.detected.pIns.userName);
@@ -524,9 +524,9 @@ const concludeRoute = (po, line) => {
     t_start: px.t_start,
     t_end: px.t_end,
     duration: px.duration,
+    day: px.day,
     objectName: px.objectName,
     channelName: px.channelName,
-    day: px.day,
     error: px.error,
   });
 
@@ -783,10 +783,10 @@ const purgeFile = (line, matched, po) => {
 
   const purge = {
     t_start: new Date(m[YY], m[MM] - 1, m[DD], m[hh], m[mm], m[ss], m[ms]).getTime(),
+    day: Number(`${m[YY]}${m[MM]}${m[DD]}`),
     channelName: m[iChannel],
     folderName: purgedElement.dir,
     objectName: purgedElement.name,
-    day: Number(`${m[YY]}${m[MM]}${m[DD]}`),
     error: undefined,
   };
 

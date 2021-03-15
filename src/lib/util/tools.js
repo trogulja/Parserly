@@ -23,8 +23,8 @@ const calcInspectTime = (n) => {
     let out_min = 2;
     let out_max = 30;
     j = ((n - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
-    j = j + 10;
-    if (j > 30) j = 30;
+    // j = j + 10;
+    // if (j > 30) j = 30;
   } else {
     n += 10;
     if (n > 300) n = 300;
@@ -35,7 +35,7 @@ const calcInspectTime = (n) => {
       let out_min = 45;
       let out_max = 90;
       j = ((n - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
-      j = j + 80;
+      // j = j + 80;
     } else {
       // 90 - 300 = remap 90 - 120
       let in_min = 90;
@@ -43,10 +43,11 @@ const calcInspectTime = (n) => {
       let out_min = 90;
       let out_max = 120;
       j = ((n - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
-      j = j + 80;
+      // j = j + 80;
     }
   }
-  return j;
+  // Dodaj sec na kraju za sve
+  return j + 15;
 };
 
 module.exports = { dayMath, calcInspectTime };

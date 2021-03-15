@@ -44,7 +44,7 @@ const writeImages = (obj) => {
 
     // Insert all objects and map their ID's to day-threadID
     const insertPObj = db.prepare(
-      'INSERT OR IGNORE INTO pObj (t_start, t_end, duration, objectName, day, channelName, numSteps, numErrors, error) VALUES (@t_start, @t_end, @duration, (SELECT id FROM names WHERE name = @objectName), (SELECT id FROM days WHERE combo = @day), (SELECT id FROM names WHERE name = @channelName), @numSteps, @numErrors, @error)'
+      'INSERT OR IGNORE INTO pObj (t_start, t_end, duration, day, objectName, channelName, numSteps, numErrors, error) VALUES (@t_start, @t_end, @duration, (SELECT id FROM days WHERE combo = @day), (SELECT id FROM names WHERE name = @objectName), (SELECT id FROM names WHERE name = @channelName), @numSteps, @numErrors, @error)'
     );
     const insertManyPObj = db.transaction((pObjs) =>
       pObjs.map((pObj) => {
@@ -66,19 +66,22 @@ const writeImages = (obj) => {
 
     // Insert all images, use day-threadID to link back to pObj and map their ID's to day-inspectID-imageName
     const insertPImg = db.prepare(
-      'INSERT OR IGNORE INTO pImg (t_start, t_end, duration, imageName, pObj, numSteps, numErrors, inspectID, error) VALUES (@t_start, @t_end, @duration, (SELECT id FROM names WHERE name = @imageName), @pObj, @numSteps, @numErrors, @inspectID, @error)'
+      'INSERT OR IGNORE INTO pImg (pObj, t_start, t_end, duration, day, imageName, channelName, numSteps, numErrors, inspectID, threadID, error) VALUES (@pObj, @t_start, @t_end, @duration, (SELECT id FROM days WHERE combo = @day), (SELECT id FROM names WHERE name = @imageName), (SELECT id FROM names WHERE name = @channelName), @numSteps, @numErrors, @inspectID, @threadID, @error)'
     );
     const insertManyPImg = db.transaction((pImgs) =>
       pImgs.map((pImg) => {
         const result = insertPImg.run({
+          pObj: threadIDs[`${pImg.day}-${pImg.threadID}`],
           t_start: pImg.t_start,
           t_end: pImg.t_end,
           duration: pImg.duration,
+          day: pImg.day,
           imageName: pImg.imageName,
-          pObj: threadIDs[`${pImg.day}-${pImg.threadID}`],
+          channelName: pImg.channelName,
           numSteps: pImg.numSteps,
           numErrors: pImg.numErrors,
           inspectID: pImg.inspectID,
+          threadID: pImg.threadID,
           error: pImg.error,
         });
         if (result.changes) inspectIDs[`${pImg.day}-${pImg.inspectID}-${pImg.imageName}`] = result.lastInsertRowid;
@@ -100,27 +103,27 @@ const writeImages = (obj) => {
           result = insertPIns.run({
             pImg: pImgID,
             t_start: pIns.t_start,
-            channelName: pIns.channelName,
+            day: pIns.day,
             imageName: pIns.imageName,
-            inspectID: pIns.inspectID,
+            channelName: pIns.channelName,
+            userName: pIns.userName,
             inspectAction: pIns.inspectAction,
             psTime: pIns.psTime,
             calcTime: pIns.calcTime,
-            userName: pIns.userName,
-            day: pIns.day,
+            inspectID: pIns.inspectID,
           });
         } catch (error) {
           console.log({
             pImg: pImgID,
             t_start: pIns.t_start,
-            channelName: pIns.channelName,
+            day: pIns.day,
             imageName: pIns.imageName,
-            inspectID: pIns.inspectID,
+            channelName: pIns.channelName,
+            userName: pIns.userName,
             inspectAction: pIns.inspectAction,
             psTime: pIns.psTime,
             calcTime: pIns.calcTime,
-            userName: pIns.userName,
-            day: pIns.day,
+            inspectID: pIns.inspectID,
           });
           console.log(error);
           throw error;

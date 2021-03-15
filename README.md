@@ -2,48 +2,26 @@
 Parsing logs and generating reports
 
 # TODO
-- [ ] parse log files
-  - [ ] regex for all currently known lines
+- [x] parse log files
+  - [x] regex for all currently known lines
   - [ ] unseen lines reporting
     - [ ] context grabbing (+-50 lines)
-    - [ ] state report (where are the pointers)
+    - [x] state report (where are the pointers)
     - [ ] pack into debug information - send for review
 - [ ] event functions
-  - [ ] purge
-    - [ ] start line: creates object
-    - [ ] error line: wraps up object
-    - [ ] resetState line
-      - [ ] determine what to do
-  - [ ] route
-    - [ ] object creation rules
-    - [ ] wrapping up rules
-    - [ ] start line: creates object
-    - [ ] end line: wraps up object
-    - [ ] error lines: wraps up object / error handling
-    - [ ] resetState line: wraps up object / error handling
-  - [ ] image editing
-    - [ ] start
-      - [ ] object creation rules
-      - [ ] startObject line: creates object
-      - [ ] image creation rules
-      - [ ] startImage line: creates image object
-    - [ ] end
-      - [ ] object wrapping up rules
-      - [ ] image wrapping up rules
-      - [ ] resetState line: wrap up things as unkown error
-    - [ ] errors
-      - [ ] ... image editing / image editing errors counting
-      - [ ] non-important error counting (attached to object)
-      - [ ] error line: create error object
-      - [ ] critical error: create error object, report error
-      - [ ] resolve line: wrap up error
-      - [ ] resetState line: wrap up error, mark as error, send for diagnostic
-  - [ ] image inspect
-    - [ ] create object
+  - [x] purge
+  - [x] route
+  - [x] image editing
+    - [x] start
+    - [x] end
+    - [x] errors
+  - [x] image inspect
+    - [x] create object
+  - [ ] critical error reporting
 - [ ] database
   - [ ] add configuration table
-  - [ ] unique statement
-  - [ ] ...
+  - [x] unique statement
+  - [ ] indexes on select statements
 - [ ] read dir with config files
   - [ ] add configuration options
   - [ ] after read, mark file as read, move to backup location
