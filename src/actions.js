@@ -832,10 +832,10 @@ const purgeFolder = (line, matched, po) => {
 
   const purge = {
     t_start: new Date(m[YY], m[MM] - 1, m[DD], m[hh], m[mm], m[ss], m[ms]).getTime(),
+    day: Number(`${m[YY]}${m[MM]}${m[DD]}`),
     channelName: m[iChannel],
     folderName: purgedElement.dir,
     objectName: purgedElement.name,
-    day: Number(`${m[YY]}${m[MM]}${m[DD]}`),
     error: undefined,
   };
 

@@ -4,8 +4,11 @@ const LineByLineReader = require('line-by-line');
 const getFiles = require('./getFiles');
 const config = require('./lib/config');
 const fns = require('./actions');
-const { writeNames, writeDays, writeImages } = require('./lib/db/tools');
+const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require('./lib/db/tools');
 const { roughSizeOfObject, humanFileSize } = require('./lib/util/extras');
+/** @typedef {import('./passableObject').PassableObject} PassableObject */
+const po = require('./passableObject');
+
 
 function getDateNum(d) {
   return `${d.getFullYear()}${d.getMonth() + 1 < 10 ? '0' : ''}${d.getMonth() + 1}${
@@ -208,24 +211,6 @@ async function main(inputFolder) {
   // const inputFile = '../_mats/logs/all-hr.log';
   // const inputFile = './all.log';
   // const outputFile = 'remains.log';
-  const tables = ['crop', 'dlink', 'pImg', 'pIns', 'pObj', 'purge', 'route', 'system'];
-  const po = {
-    detectedDefault: {},
-    detected: {},
-    output: {},
-    names: new Set(),
-    days: new Set(),
-    configPointer: new Set(),
-    config,
-  };
-  po.configPointer.add(po.config);
-
-  tables.forEach((el) => {
-    po.detectedDefault[el] = {};
-    po.detected[el] = {};
-    po.output[el] = [];
-  });
-
   const files = await getFiles(inputFolder);
 
   // const files = [
@@ -248,7 +233,9 @@ async function main(inputFolder) {
       const result = await countLines(file.path, true);
       file.lines = result.lines;
       file.firstDate = result.firstDate;
+      file.firstLine = result.firstLine;
       file.lastDate = result.lastDate;
+      file.lastLine = result.lastLine;
     }
   } catch (error) {
     console.log(error);
@@ -258,37 +245,13 @@ async function main(inputFolder) {
   writeout('Started parsing files...');
   for (const file of files) {
     writeout(`Parsing ${file.name}`);
+    // TODO: test if we already parsed this file
     await parseFile(file, po);
-    // console.log(getDateNum(file.firstDate), ' - ', getDateNum(file.lastDate));
-    // console.log([...po.days].sort());
     for (const key in po.output) {
       if (po.output[key].length) console.log({ [key]: po.output[key].length });
     }
-    const dbResult1 = writeNames(po.names);
-    console.log(
-      `Colected ${po.names.size} names, written ${dbResult1.reduce((acc, val) => acc + val.changes, 0)} in db.`
-    );
-    if (!!dbResult1) {
-      po.names.clear();
-    }
 
-    const dbResult2 = writeDays(po.days);
-    console.log(
-      `Colected ${po.days.size} days, written ${dbResult2.reduce((acc, val) => acc + val.changes, 0)} in db.`
-    );
-    if (!!dbResult2) po.days.clear();
-
-    const dbResult3 = writeImages(po.output);
-    if (dbResult3) {
-      // delete po.output.pObj;
-      po.output.pObj = [];
-      // delete po.output.pImg;
-      po.output.pImg = [];
-      // delete po.output.pIns;
-      po.output.pIns = [];
-      po.output.purge = [];
-      po.output.route = [];
-    }
+    digestAll(po);
 
     console.log(`po is roughly ${humanFileSize(roughSizeOfObject(po))}`);
   }
@@ -298,6 +261,82 @@ async function main(inputFolder) {
   writeout('Done.');
   // console.log(postWork().reduce((r, c) => Object.assign(r, c), {}));
 }
+
+const digestAll = (po) => {
+  digestNames(po);
+  digestDays(po);
+  digestImages(po);
+  digestRoutes(po);
+  digestPurges(po);
+};
+
+/** digestNames(po)
+ * Writes names set to database, reports status, clears names set
+ * @param {PassableObject} po common Passable object
+ * @returns {PassableObject}
+ */
+const digestNames = (po) => {
+  const result = writeNames(po.names);
+  console.log(`Collected ${po.names.size} names, written ${result.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  po.names.clear();
+  return po;
+};
+
+/** digestDays(po)
+ * Writes days set to database, reports status, clears days set
+ * @param {PassableObject} po common Passable object
+ * @returns {PassableObject}
+ */
+const digestDays = (po) => {
+  const result = writeDays(po.days);
+  console.log(`Collected ${po.days.size} days, written ${result.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  po.days.clear();
+  return po;
+};
+
+/** digestImages(po)
+ * Writes images (pObj, pImg, pIns) array to database, reports status, clears referenced po.output array
+ * @param {PassableObject} po common Passable object
+ * @returns {PassableObject}
+ */
+const digestImages = (po) => {
+  const result = writeImages(po.output);
+  console.log(`Collected ${po.output.pObj.length} objects, written ${result.pObj.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  po.output.pObj = [];
+  console.log(`Collected ${po.output.pImg.length} images, written ${result.pImg.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  po.output.pImg = [];
+  console.log(`Collected ${po.output.pIns.length} inspects, written ${result.pIns.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  po.output.pIns = [];
+  return po;
+};
+
+/** digestRoutes(po)
+ * Writes routes array to database, reports status, clears po.output.route array
+ * @param {PassableObject} po common Passable object
+ * @returns {PassableObject}
+ */
+const digestRoutes = (po) => {
+  const result = writeRoutes(po.output.route);
+  console.log(
+    `Collected ${po.output.route.length} routes, written ${result.reduce((acc, val) => acc + val.changes, 0)} in db.`
+  );
+  po.output.route = [];
+  return po;
+};
+
+/** digestPurges(po)
+ * Writes purges array to database, reports status, clears po.output.purge array
+ * @param {PassableObject} po common Passable object
+ * @returns {PassableObject}
+ */
+const digestPurges = (po) => {
+  const result = writePurges(po.output.purge);
+  console.log(
+    `Collected ${po.output.purge.length} purges, written ${result.reduce((acc, val) => acc + val.changes, 0)} in db.`
+  );
+  po.output.purge = [];
+  return po;
+};
 
 function postWork(array, parent) {
   if (!array) array = config;

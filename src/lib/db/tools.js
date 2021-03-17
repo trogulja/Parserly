@@ -15,7 +15,9 @@ const writeNames = (names) => {
 
 const writeDays = (days) => {
   try {
-    const insert = db.prepare('INSERT OR IGNORE INTO days (combo, year, month, day) VALUES (@combo, @year, @month, @day)');
+    const insert = db.prepare(
+      'INSERT OR IGNORE INTO days (combo, year, month, day) VALUES (@combo, @year, @month, @day)'
+    );
     const insertMany = db.transaction((days) =>
       days.map((d) =>
         insert.run({
@@ -96,8 +98,11 @@ const writeImages = (obj) => {
     const insertManyPIns = db.transaction((pInss) =>
       pInss.map((pIns) => {
         let pImgID;
-        if (inspectIDs[`${pIns.day}-${pIns.inspectID}-${pIns.imageName}`]) pImgID = inspectIDs[`${pIns.day}-${pIns.inspectID}-${pIns.imageName}`];
-        if (!pImgID) if (inspectIDs[`${dayMath(pIns.day, -1)}-${pIns.inspectID}-${pIns.imageName}`]) pImgID = inspectIDs[`${dayMath(pIns.day, -1)}-${pIns.inspectID}-${pIns.imageName}`];
+        if (inspectIDs[`${pIns.day}-${pIns.inspectID}-${pIns.imageName}`])
+          pImgID = inspectIDs[`${pIns.day}-${pIns.inspectID}-${pIns.imageName}`];
+        if (!pImgID)
+          if (inspectIDs[`${dayMath(pIns.day, -1)}-${pIns.inspectID}-${pIns.imageName}`])
+            pImgID = inspectIDs[`${dayMath(pIns.day, -1)}-${pIns.inspectID}-${pIns.imageName}`];
         let result;
         try {
           result = insertPIns.run({
@@ -132,11 +137,11 @@ const writeImages = (obj) => {
       })
     );
 
-    insertManyPObj(obj.pObj);
-    insertManyPImg(obj.pImg);
-    insertManyPIns(obj.pIns);
+    const step1 = insertManyPObj(obj.pObj);
+    const step2 = insertManyPImg(obj.pImg);
+    const step3 = insertManyPIns(obj.pIns);
 
-    return true;
+    return { pObj: step1, pImg: step2, pIns: step3 };
   } catch (error) {
     if (!db.inTransaction) throw error; // (transaction was forcefully rolled back)
     console.log(error);
@@ -144,4 +149,32 @@ const writeImages = (obj) => {
   }
 };
 
-module.exports = { writeNames, writeDays, writeImages };
+const writeRoutes = (routes) => {
+  try {
+    const insert = db.prepare(
+      'INSERT OR IGNORE INTO route (t_start, t_end, duration, day, objectName, channelName, error) VALUES (@t_start, @t_end, @duration, (SELECT id FROM days WHERE combo = @day), (SELECT id FROM names WHERE name = @objectName), (SELECT id FROM names WHERE name = @channelName), @error)'
+    );
+    const insertMany = db.transaction((routes) => routes.map((route) => insert.run(route)));
+    return insertMany(routes);
+  } catch (error) {
+    if (!db.inTransaction) throw error; // (transaction was forcefully rolled back)
+    console.log(error);
+    return false;
+  }
+};
+
+const writePurges = (purges) => {
+  try {
+    const insert = db.prepare(
+      'INSERT OR IGNORE INTO purge (t_start, day, channelName, folderName, objectName, error) VALUES (@t_start, (SELECT id FROM days WHERE combo = @day), (SELECT id FROM names WHERE name = @channelName), (SELECT id FROM names WHERE name = @folderName), (SELECT id FROM names WHERE name = @objectName), @error)'
+    );
+    const insertMany = db.transaction((purges) => purges.map((purge) => insert.run(purge)));
+    return insertMany(purges);
+  } catch (error) {
+    if (!db.inTransaction) throw error; // (transaction was forcefully rolled back)
+    console.log(error);
+    return false;
+  }
+};
+
+module.exports = { writeNames, writeDays, writeImages, writeRoutes, writePurges };
