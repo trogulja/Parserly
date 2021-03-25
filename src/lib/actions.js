@@ -1,14 +1,24 @@
 const { cloneDeep } = require('lodash');
 const path = require('path');
-const { calcInspectTime } = require('./lib/util/tools');
+const { calcInspectTime } = require('./util/tools');
+/** @typedef {import('./passableObject').PassableObject} PassableObject */
+/** @typedef {import('./passableObject').claroConfigElement} claroConfigElement */
 
 /**
- * Utility
+ * Gets the index of array element offset by 1 to match RegExp.exec() return
+ * @param {Array} array array with all elements
+ * @param {string} string string element of the array
+ * @returns {number} number value of element index
  */
 function getIndex(array, string) {
   return array.indexOf(string) + 1;
 }
 
+/**
+ * Gets the index of date elements from the array, offset by 1, to match RegExp.exec() return
+ * @param {Array} array array with all elements
+ * @returns {{YY: number, MM: number, DD: number, hh: number, mm: number, ss: number, ms: number}} number value of elements index
+ */
 function getDateIndex(array) {
   const YY = getIndex(array, 't_year');
   const MM = getIndex(array, 't_month');
@@ -20,17 +30,22 @@ function getDateIndex(array) {
   return { YY, MM, DD, hh, mm, ss, ms };
 }
 
+/**
+ * Escapes all special characters so that the string can safely be passed to new RegExp() constructor
+ * @param {string} text Some string that needs to be passed into new RegExp() constructor
+ * @returns {string} Sanitized script
+ */
 function escapeRegExp(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
 
 /**
- * Image processing channel
+ * Image processing channel - startObject
  * Creates new pObj item, concludes old one if exists
  * @param {String} line - line from log file
- * @param {Object} matched - config's object that tested against line
- * @param {Object} po - passable object we are mutating
- * @return po
+ * @param {claroConfigElement} matched - config's object that tested against line
+ * @param {PassableObject} po - passable object we are mutating
+ * @return {PassableObject}
  */
 const startObject = (line, matched, po) => {
   const m = matched.match.exec(line);
@@ -70,6 +85,14 @@ const startObject = (line, matched, po) => {
   return po;
 };
 
+/**
+ * Image processing channel - startImage
+ * Creates new pImg item, concludes old one if exists
+ * @param {String} line - line from log file
+ * @param {claroConfigElement} matched - config's object that tested against line
+ * @param {PassableObject} po - passable object we are mutating
+ * @return {PassableObject}
+ */
 const startImage = (line, matched, po) => {
   const m = matched.match.exec(line);
   const { YY, MM, DD, hh, mm, ss, ms } = getDateIndex(matched.members);
@@ -120,6 +143,14 @@ const startImage = (line, matched, po) => {
   return po;
 };
 
+/**
+ * Image processing channel - processingCount
+ * Mutates pObj and pImg numSteps property
+ * @param {String} line - line from log file
+ * @param {claroConfigElement} matched - config's object that tested against line
+ * @param {PassableObject} po - passable object we are mutating
+ * @return {PassableObject}
+ */
 const processingCount = (line, matched, po) => {
   if (!po.detected.pObj.t_start) {
     console.log({ line });
@@ -144,6 +175,14 @@ const processingCount = (line, matched, po) => {
   return po;
 };
 
+/**
+ * Image processing channel - processingErrorCount
+ * Mutates pObj and pImg numErrors property
+ * @param {String} line - line from log file
+ * @param {claroConfigElement} matched - config's object that tested against line
+ * @param {PassableObject} po - passable object we are mutating
+ * @return {PassableObject}
+ */
 const processingErrorCount = (line, matched, po) => {
   if (!po.detected.pObj.t_start) {
     console.log({ line });
@@ -164,11 +203,27 @@ const processingErrorCount = (line, matched, po) => {
   return po;
 };
 
+/**
+ * Image processing channel - processingReject
+ * Reserved for future use
+ * @param {String} line - line from log file
+ * @param {claroConfigElement} matched - config's object that tested against line
+ * @param {PassableObject} po - passable object we are mutating
+ * @return {PassableObject}
+ */
 const processingReject = (line, matched, po) => {
   // For future use
   return po;
 };
 
+/**
+ * Image processing channel - inspectorLink
+ * Mutates pImg inspectID property
+ * @param {String} line - line from log file
+ * @param {claroConfigElement} matched - config's object that tested against line
+ * @param {PassableObject} po - passable object we are mutating
+ * @return {PassableObject}
+ */
 const inspectorLink = (line, matched, po) => {
   const m = matched.match.exec(line);
   const { YY, MM, DD, hh, mm, ss, ms } = getDateIndex(matched.members);
@@ -187,6 +242,14 @@ const inspectorLink = (line, matched, po) => {
   return po;
 };
 
+/**
+ * Image processing channel - endImage
+ * Mutates pObj and pImg t_end and duration properties
+ * @param {String} line - line from log file
+ * @param {claroConfigElement} matched - config's object that tested against line
+ * @param {PassableObject} po - passable object we are mutating
+ * @return {PassableObject}
+ */
 const endImage = (line, matched, po) => {
   const m = matched.match.exec(line);
   const { YY, MM, DD, hh, mm, ss, ms } = getDateIndex(matched.members);

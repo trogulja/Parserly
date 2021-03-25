@@ -2,9 +2,9 @@ const path = require('path');
 const LineByLineReader = require('line-by-line');
 /** @typedef {import('./getFiles').FileObject} FileObject */
 const getFiles = require('./getFiles');
-const config = require('./lib/config');
+const config = require('./config');
 const fns = require('./actions');
-const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require('./lib/db/tools');
+const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require('./db/tools');
 /** @typedef {import('./passableObject').PassableObject} PassableObject */
 /** @typedef {import('./passableObject').claroConfigElement} claroConfigElement */
 const po = require('./passableObject');

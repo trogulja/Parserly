@@ -1,4 +1,4 @@
-const config = require('./lib/config');
+const config = require('./config');
 const tables = ['crop', 'dlink', 'pImg', 'pIns', 'pObj', 'purge', 'route', 'system'];
 
 /** PassableObject
@@ -148,5 +148,7 @@ tables.forEach((el) => {
   po.detected[el] = {};
   po.output[el] = [];
 });
+
+po.configPointer.add(po.config)
 
 module.exports = po;
