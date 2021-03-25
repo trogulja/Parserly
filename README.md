@@ -20,6 +20,7 @@ Parsing logs and generating reports
   - [ ] critical error reporting
 - [ ] database
   - [ ] add configuration table
+    - [ ] make centralized configuration dispatch
   - [x] unique statement
   - [ ] indexes on select statements
 - [ ] read dir with config files

@@ -1,21 +1,19 @@
-const fs = require('fs');
 const path = require('path');
 const LineByLineReader = require('line-by-line');
+/** @typedef {import('./getFiles').FileObject} FileObject */
 const getFiles = require('./getFiles');
 const config = require('./lib/config');
 const fns = require('./actions');
 const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require('./lib/db/tools');
-const { roughSizeOfObject, humanFileSize } = require('./lib/util/extras');
 /** @typedef {import('./passableObject').PassableObject} PassableObject */
+/** @typedef {import('./passableObject').claroConfigElement} claroConfigElement */
 const po = require('./passableObject');
 
-
-function getDateNum(d) {
-  return `${d.getFullYear()}${d.getMonth() + 1 < 10 ? '0' : ''}${d.getMonth() + 1}${
-    d.getDate() < 10 ? '0' : ''
-  }${d.getDate()}`;
-}
-
+/**
+ * Prefix string with date stamp and log to the console
+ * @param {string} s String value that is to be reported
+ * @param {boolean} sameline Write to console without newline
+ */
 function writeout(s, sameline) {
   const ts = `[${new Date().toTimeString().split(' ')[0]}]`;
   if (sameline) {
@@ -25,11 +23,22 @@ function writeout(s, sameline) {
   }
 }
 
+/**
+ * Reports percentage of current parse process
+ * @param {number} lineNr Current line number
+ * @param {number} totalLines Total lines
+ */
 function jobStatus(lineNr, totalLines) {
   const percent = parseInt((lineNr / totalLines) * 100);
   writeout(`Job at: ${percent}%`, 0);
 }
 
+/**
+ * Counts lines from file and gets meta information
+ * @param {FileObject} inputFile file object
+ * @param {boolean} getMeta
+ * @return {Promise.<{lines: number, firstLine: string, lastLine: string, firstDate: Date, lastDate: Date}>}
+ */
 function countLines(inputFile, getMeta) {
   return new Promise((resolve, reject) => {
     const matchDate = /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3})/;
@@ -52,7 +61,7 @@ function countLines(inputFile, getMeta) {
 
     file = new LineByLineReader(inputFile);
 
-    file.on('line', (line) => {
+    file.on('line', line => {
       if (getMeta) {
         const res = matchDate.exec(line);
         if (res) {
@@ -66,7 +75,7 @@ function countLines(inputFile, getMeta) {
       }
       num++;
     });
-    file.on('error', (err) => {
+    file.on('error', err => {
       clearInterval(report);
       return reject(err);
     });
@@ -80,6 +89,15 @@ function countLines(inputFile, getMeta) {
 
 let recursiveInvocation = 0;
 
+/**
+ * Contextually checks if line matches current config node or one of it's childs or parents
+ * @param {string} line line to be tested
+ * @param {number} lineNr current line number in current file
+ * @param {PassableObject} po common PassableObject
+ * @param {number} checkIndex 
+ * @param {boolean} debug 
+ * @returns {claroConfigElement}
+ */
 function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
   let matched = false;
   let matchedPointer;
@@ -165,6 +183,12 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
   return matched;
 }
 
+/** parseFile(inputFile, po)
+ * Reads line by line of inputFile and calls matchLine() on each
+ * @param {FileObject} inputFile
+ * @param {PassableObject} po
+ * @return {Promise}
+ */
 function parseFile(inputFile, po) {
   return new Promise((resolve, reject) => {
     const file = new LineByLineReader(inputFile.path, { encoding: 'utf8' });
@@ -173,13 +197,13 @@ function parseFile(inputFile, po) {
       jobStatus(lineNr, inputFile.lines);
     }, 200);
 
-    file.on('line', (line) => {
+    file.on('line', line => {
       lineNr++;
       recursiveInvocation = 0;
       const result = matchLine(line, lineNr, po);
       if (!result) matchLine(line, lineNr, po, undefined, true);
     });
-    file.on('error', (error) => reject(error));
+    file.on('error', error => reject(error));
     file.on('end', () => {
       clearInterval(report);
       jobStatus(lineNr, inputFile.lines);
@@ -188,46 +212,15 @@ function parseFile(inputFile, po) {
   });
 }
 
+/** main(inputFolder)
+ * Main logic function - takes in path and does all the work
+ * @param {string} inputFolder path to directory
+ * @return
+ */
 async function main(inputFolder) {
-  // {
-  //   path: 'E:\\code\\Apps\\Parserly\\_mats\\claro logs\\logs\\JClaro.log',
-  //   name: 'JClaro.log',
-  //   dir: 'E:\\code\\Apps\\Parserly\\_mats\\claro logs\\logs',
-  //   size: 6595460,
-  //   humanSize: '6.60 MB',
-  //   t_created: 1613645790610.293,
-  //   t_modified: 1613231910756.4705,
-  //   t_changed: 1613231910756.4705,
-  //   t_accessed: 1613645791547.812
-  // }
-  // {
-  //   ...Set,
-  //   lines: 50000,
-  //   firstLine: '20210201 12:01:24.831 01ec6fd8-3aac-46f1-aec8-07e4116669a3.jpg sent to inspector(3999)',
-  //   lastLine: "20210201 13:16:32.193 file 'd71f8eac-159a-4bfb-8771-9bb04a959bae.jpg' copied to folder: C:\_claro\InternalRoutes\KLZ\InspectorIN"
-  // }
-  // const inputFile = '../_mats/logs/JClaro.log';
-  // const inputFile = '../_mats/logs/all-au.log';
-  // const inputFile = '../_mats/logs/all-hr.log';
-  // const inputFile = './all.log';
-  // const outputFile = 'remains.log';
   const files = await getFiles(inputFolder);
-
-  // const files = [
-  //   {
-  //     path: 'test.log',
-  //     name: 'encoding.log',
-  //     dir: '..\\_mats\\logs',
-  //     size: 6595460,
-  //     humanSize: '6.60 MB',
-  //     t_created: 1613645790610.293,
-  //     t_modified: 1613231910756.4705,
-  //     t_changed: 1613231910756.4705,
-  //     t_accessed: 1613645791547.812,
-  //   },
-  // ];
-
   writeout('Collecting file metadata...');
+
   try {
     for (const file of files) {
       const result = await countLines(file.path, true);
@@ -253,91 +246,121 @@ async function main(inputFolder) {
 
     digestAll(po);
 
-    console.log(`po is roughly ${humanFileSize(roughSizeOfObject(po))}`);
+    // console.log(`po is roughly ${fileSizeSI(roughSizeOfObject(po))}`);
   }
-
-  // console.log(dbResult1, dbResult2);
 
   writeout('Done.');
   // console.log(postWork().reduce((r, c) => Object.assign(r, c), {}));
 }
 
-const digestAll = (po) => {
-  digestNames(po);
-  digestDays(po);
-  digestImages(po);
-  digestRoutes(po);
-  digestPurges(po);
+/** dbResult
+ * @typedef {Object} dbResult
+ * @property {number} collected Number of items prepared for the database write
+ * @property {number} written Number of items written in the database
+ */
+
+/**
+ * Calls individual digests and combines returns into one
+ * @param {PassableObject} po common Passable object
+ * @return {{names: dbResult, days: dbResult, pObj: dbResult, pImg: dbResult, pIns: dbResult, route: dbResult, purge: dbResult}} number of items collected and written to the database
+ */
+const digestAll = po => {
+  const names = digestNames(po);
+  const days = digestDays(po);
+  const images = digestImages(po);
+  const route = digestRoutes(po);
+  const purge = digestPurges(po);
+  return { ...names, ...days, ...images, ...route, ...purge };
 };
 
 /** digestNames(po)
  * Writes names set to database, reports status, clears names set
  * @param {PassableObject} po common Passable object
- * @returns {PassableObject}
+ * @return {{names: dbResult}} Number of names collected and written to the database
  */
-const digestNames = (po) => {
+const digestNames = po => {
   const result = writeNames(po.names);
-  console.log(`Collected ${po.names.size} names, written ${result.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  const names = { collected: po.names.size, written: result.reduce((acc, val) => acc + val.changes, 0) };
+  console.log(`Collected ${names.collected} names, written ${names.written} in db.`);
   po.names.clear();
-  return po;
+  return { names };
 };
 
 /** digestDays(po)
  * Writes days set to database, reports status, clears days set
  * @param {PassableObject} po common Passable object
- * @returns {PassableObject}
+ * @return {{days: dbResult}} Number of days collected and written to the database
  */
-const digestDays = (po) => {
+const digestDays = po => {
   const result = writeDays(po.days);
-  console.log(`Collected ${po.days.size} days, written ${result.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  const days = { collected: po.days.size, written: result.reduce((acc, val) => acc + val.changes, 0) };
+  console.log(`Collected ${days.collected} days, written ${days.written} in db.`);
   po.days.clear();
-  return po;
+  return { days };
 };
 
 /** digestImages(po)
  * Writes images (pObj, pImg, pIns) array to database, reports status, clears referenced po.output array
  * @param {PassableObject} po common Passable object
- * @returns {PassableObject}
+ * @return {{pObj: dbResult, pImg: dbResult, pIns: dbResult}} Number of images collected and written to the database
  */
-const digestImages = (po) => {
+const digestImages = po => {
   const result = writeImages(po.output);
+  const images = {
+    pObj: {
+      collected: po.output.pObj.length,
+      written: result.pObj.reduce((acc, val) => acc + val.changes, 0)
+    },
+    pImg: {
+      collected: po.output.pImg.length,
+      written: result.pImg.reduce((acc, val) => acc + val.changes, 0)
+    },
+    pIns: {
+      collected: po.output.pIns.length,
+      written: result.pIns.reduce((acc, val) => acc + val.changes, 0)
+    }
+  };
   console.log(`Collected ${po.output.pObj.length} objects, written ${result.pObj.reduce((acc, val) => acc + val.changes, 0)} in db.`);
   po.output.pObj = [];
   console.log(`Collected ${po.output.pImg.length} images, written ${result.pImg.reduce((acc, val) => acc + val.changes, 0)} in db.`);
   po.output.pImg = [];
   console.log(`Collected ${po.output.pIns.length} inspects, written ${result.pIns.reduce((acc, val) => acc + val.changes, 0)} in db.`);
   po.output.pIns = [];
-  return po;
+  return images;
 };
 
 /** digestRoutes(po)
  * Writes routes array to database, reports status, clears po.output.route array
  * @param {PassableObject} po common Passable object
- * @returns {PassableObject}
+ * @return {{route: dbResult}} Number of routes collected and written to the database
  */
-const digestRoutes = (po) => {
+const digestRoutes = po => {
   const result = writeRoutes(po.output.route);
-  console.log(
-    `Collected ${po.output.route.length} routes, written ${result.reduce((acc, val) => acc + val.changes, 0)} in db.`
-  );
+  const route = { collected: po.output.route.length, written: result.reduce((acc, val) => acc + val.changes, 0) };
+  console.log(`Collected ${route.collected} routes, written ${route.written} in db.`);
   po.output.route = [];
-  return po;
+  return { route };
 };
 
 /** digestPurges(po)
  * Writes purges array to database, reports status, clears po.output.purge array
  * @param {PassableObject} po common Passable object
- * @returns {PassableObject}
+ * @return {{purge: dbResult}} Number of purges collected and written to the database
  */
-const digestPurges = (po) => {
+const digestPurges = po => {
   const result = writePurges(po.output.purge);
-  console.log(
-    `Collected ${po.output.purge.length} purges, written ${result.reduce((acc, val) => acc + val.changes, 0)} in db.`
-  );
+  const purge = { collected: po.output.purge.length, written: result.reduce((acc, val) => acc + val.changes, 0) };
+  console.log(`Collected ${purge.collected} purges, written ${purge.written} in db.`);
   po.output.purge = [];
-  return po;
+  return { purge };
 };
 
+/**
+ * Extracts count and id from config nodes and flattens it into single array
+ * @param {Object} [array] config array called when method recurses
+ * @param {string} [parent] obsolete?
+ * @return {Array.<Object.<string, number>>}
+ */
 function postWork(array, parent) {
   if (!array) array = config;
   if (!parent) parent = 'root';
@@ -350,5 +373,3 @@ function postWork(array, parent) {
 }
 
 module.exports = main;
-main('../_mats/logs/HR');
-// console.log(db)

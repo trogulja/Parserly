@@ -30,7 +30,7 @@ function escapeRegExp(text) {
  * @param {String} line - line from log file
  * @param {Object} matched - config's object that tested against line
  * @param {Object} po - passable object we are mutating
- * @returns po
+ * @return po
  */
 const startObject = (line, matched, po) => {
   const m = matched.match.exec(line);

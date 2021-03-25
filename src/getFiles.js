@@ -3,10 +3,39 @@ const path = require('path');
 const claroFiles = /JClaro.log(?:\.\d|.all\d.txt|)$/;
 const claroFiles2 = /\d{8} \d{6}\.\d{3}-JClaro.+/
 
+/** FileObject
+ * Complete information about file
+ * @typedef {Object} FileObject
+ * @property {string} path full path + filename + extension - ready to pass on
+ * @property {string} name filename with extension
+ * @property {string} dir folder in which filename resides
+ * @property {number} size file size in bytes
+ * @property {string} humanSize human readable file size
+ * @property {number} t_created time value in ms
+ * @property {number} t_modified time value in ms
+ * @property {number} t_changed time value in ms
+ * @property {number} t_accessed time value in ms
+ * @property {number} [lines] number of lines in file
+ * @property {Date} [firstDate] date object: first encountered date in file
+ * @property {string} [firstLine] first line in file that contains date
+ * @property {Date} [lastDate] date object: last encountered date in file
+ * @property {string} [lastLine] last line in file that contains date
+ */
+
+/** fileSizeSI(a, b, c, d, e)
+ * One line function that converts bytes into human readable size
+ * @param {number} a file size in bytes
+ * @return {string} human readable file size
+ */
 function fileSizeSI(a, b, c, d, e) {
   return ((b = Math), (c = b.log), (d = 1e3), (e = (c(a) / c(d)) | 0), a / b.pow(d, e)).toFixed(2) + ' ' + (e ? 'kMGTPEZY'[--e] + 'B' : 'Bytes');
 }
 
+/** getFiles(dir)
+ * Reads files from dir, reverses them (log rotated files are in reverse order)
+ * @param {string} dir path to directory
+ * @return {FileObject}
+ */
 async function getFiles(dir) {
   const rawContents = await fs.readdir(dir);
   const files = await Promise.all(
@@ -32,6 +61,11 @@ async function getFiles(dir) {
   return files;
 }
 
+/** getFiles2(dir)
+ * Reads files from dir - test files, they are in correct order
+ * @param {string} dir path to directory
+ * @return {FileObject}
+ */
 async function getFiles2(dir) {
   const rawContents = await fs.readdir(dir);
   const files = await Promise.all(

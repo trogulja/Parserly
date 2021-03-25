@@ -29,7 +29,7 @@ const tables = ['crop', 'dlink', 'pImg', 'pIns', 'pObj', 'purge', 'route', 'syst
  * @property {string} desc string value: description of the configuration node
  * @property {string[]} members array of strings: positions and descriptions of regexp capture groups
  * @property {RegExp} match RegExp literal
- * @property {Array.<claroConfigElement>} children array of child configuration nodes
+ * @property {Array.<claroConfigElement>} [children] array of child configuration nodes
  */
 
 /** PassableObject.Detected
