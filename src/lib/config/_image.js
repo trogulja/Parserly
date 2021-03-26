@@ -373,7 +373,7 @@ const image = [
                 act: 'ignore',
                 desc: 'error extra info',
                 members: [...dateConstruct],
-                match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) ..ERROR INPUT  : in image '(.+)', (?:image|file)size exceeds maximum (?:image|file)size.+$/
+                match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) ..ERROR INPUT {2}: in image '(.+)', (?:image|file)size exceeds maximum (?:image|file)size.+$/
               }
             ],
           },
@@ -472,7 +472,7 @@ const image = [
             act: 'endPDFNothingDone',
             desc: 'pdf end nothing done',
             members: [...dateConstruct, 'channel', 'filename'],
-            match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) Channel '(.+)'  processed file: (.+)$/,
+            match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) Channel '(.+)' {2}processed file: (.+)$/,
           },
           {
             // 20190510 16:02:57.486 extracting image: DeviceN ColorSpace DEFAULT not supported
@@ -545,7 +545,7 @@ const image = [
             act: 'ignore',
             desc: 'not converting to B&W',
             members: [...dateConstruct],
-            match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) ..ERROR  Output ICC profile.+not active$/
+            match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) ..ERROR {2}Output ICC profile.+not active$/
           }
         ],
       },

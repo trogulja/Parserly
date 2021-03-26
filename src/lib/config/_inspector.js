@@ -58,7 +58,7 @@ const inspector = [
     act: 'ignore',
     desc: 'end error',
     members: [...dateConstruct, 'inspectID', 'filepath'],
-    match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) (?:..ERROR )?INSPECT Original file does not exist for Inspector for job: (\d+), originalFile = (.+),  removing jobfile now$/,
+    match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) (?:..ERROR )?INSPECT Original file does not exist for Inspector for job: (\d+), originalFile = (.+), {2}removing jobfile now$/,
   },
   {
     // 20180812 13:16:55.653 CONVERT profile  sRGB IEC61966-2.1 (Perceptual rendering intent)

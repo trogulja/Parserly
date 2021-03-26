@@ -15,7 +15,7 @@ const purge = [
     act: 'purgeFolder',
     desc: 'folder delete',
     members: [...dateConstruct, 'channel', 'folderpath'],
-    match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) PURGING  channel '(.+)' delete empty subfolder successfully\s+'(.+)'\s*$/,
+    match: /(\d{4})(\d{2})(\d{2}) (\d{2}):(\d{2}):(\d{2}).(\d{3}) PURGING {2}channel '(.+)' delete empty subfolder successfully\s+'(.+)'\s*$/,
   },
 ];
 
