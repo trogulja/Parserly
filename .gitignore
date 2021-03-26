@@ -21,6 +21,7 @@ bower_components
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 dist
 build/Release
+dist_electron/
 
 # Dependency directories
 node_modules/
