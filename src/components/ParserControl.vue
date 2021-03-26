@@ -5,10 +5,7 @@
         <v-card>
           <v-row>
             <v-col class="px-10 d-flex align-center justify-center">
-              <v-spacer />
-              <v-btn>Start</v-btn>
-              <v-spacer />
-              <v-btn>Stop</v-btn>
+              <v-switch v-model="crontab" inset :label="`Crontab is ${loading ? '...' : crontab ? 'on' : 'off'}`" :disabled="loading" :loading="loading" @change="switchCrontab" />
               <v-spacer />
             </v-col>
           </v-row>
@@ -58,28 +55,40 @@ export default {
         warn: { icon: 'mdi-alert-outline', color: 'orange' },
         error: { icon: 'mdi-alert-octagram-outline', color: 'red' }
       },
-      logs: []
+      logs: [],
+      crontab: false
     };
   },
 
   created() {
     const thisclass = this;
     window.ipcRenderer.on('job', function(event, arg) {
-      if (arg === 'started') thisclass.loading = true;
-      if (arg === 'stopped') thisclass.loading = false;
+      if (arg === 'started' || arg === 'stopped') thisclass.loading = false;
+      if (arg === 'started') thisclass.crontab = true;
+      if (arg === 'stopped') thisclass.crontab = false;
     });
     window.ipcRenderer.on('log', function(event, arg) {
       thisclass.logs.unshift(arg);
       if (thisclass.logs.length > 30) thisclass.logs.length = 30;
     });
+    setTimeout(() => {
+      thisclass.loading = true;
+      thisclass.crontab = true;
+      window.ipcRenderer.send('job', 'start');
+    }, 500);
   },
 
   methods: {
-    startMain: function() {
-      window.ipcRenderer.send('job', 'init');
+    start: function() {
+      this.loading = true;
     },
-    startCheck: function() {
-      window.ipcRenderer.send('job', 'check');
+    stop: function() {
+      this.loading = false;
+    },
+    switchCrontab: function(state) {
+      this.loading = true;
+      if (state) window.ipcRenderer.send('job', 'start');
+      else window.ipcRenderer.send('job', 'stop');
     },
     checkOverflow: function(id) {
       console.log(id);

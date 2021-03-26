@@ -111,6 +111,7 @@ app.on('ready', async () => {
   createWindow();
 });
 
+// Exit cleanly on request from parent process in development mode.
 if (isDevelopment) {
   if (process.platform === 'win32') {
     process.on('message', data => {
@@ -125,6 +126,7 @@ if (isDevelopment) {
   }
 }
 
+// Logs
 if (!isDevelopment) {
   Object.assign(console, log.functions);
   log.transports.file.level = 'debug';
@@ -153,7 +155,7 @@ if (!isDevelopment) {
     log.info('Update downloaded');
   });
 }
-
+// Handle errors
 log.catchErrors({
   showDialog: false,
   onError(error, versions, submitIssue) {
@@ -180,5 +182,37 @@ log.catchErrors({
           electron.app.quit();
         }
       });
+  }
+});
+
+// Data handle logic
+import notifier from './lib/util/notifier';
+import CronController from './worker';
+
+notifier.on('ok', message => {
+  sendToRenderer('ok', message);
+});
+
+function sendToRenderer(event, text) {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes() < 10 ? `0${now.getMinutes()}` : now.getMinutes();
+  const seconds = now.getSeconds() < 10 ? `0${now.getSeconds()}` : now.getSeconds();
+  const time = `${hours}:${minutes}:${seconds}`;
+  win.webContents.send('log', { event, time, text });
+}
+
+ipcMain.on('job', async function(event, arg) {
+  if (arg === 'start') {
+    CronController.start();
+    setTimeout(() => {
+      win.webContents.send('job', 'started');
+    }, 1000);
+  }
+  if (arg === 'stop') {
+    CronController.stop();
+    setTimeout(() => {
+      win.webContents.send('job', 'stopped');
+    }, 1000);
   }
 });

@@ -1,6 +1,22 @@
 const VueLoaderPlugin = require('vue-loader/lib/plugin');
 const VuetifyLoaderPlugin = require('vuetify-loader/lib/plugin');
 
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// console.log('webpack options have been read!')
+// throw new Error("ohai! You've seen this!!")
+
 module.exports = {
   target: 'node',
   module: {
@@ -11,17 +27,18 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env'],
-          },
-        },
+            presets: ['@vue/cli-plugin-babel/preset', '@babel/preset-env'],
+            plugins: ['@babel/plugin-proposal-class-properties']
+          }
+        }
       },
       {
         test: /\.sql$/,
-        use: ['sql-loader'],
+        use: ['sql-loader']
       },
       {
         test: /\.vue$/,
-        use: ['vue-loader', 'vuetify-loader'],
+        use: ['vue-loader', 'vuetify-loader']
       },
       {
         test: /\.s(c|a)ss$/,
@@ -34,13 +51,13 @@ module.exports = {
               implementation: require('sass'),
               sassOptions: {
                 fiber: require('fibers'),
-                indentedSyntax: true,
-              },
-            },
-          },
-        ],
-      },
-    ],
+                indentedSyntax: true
+              }
+            }
+          }
+        ]
+      }
+    ]
   },
-  plugins: [new VueLoaderPlugin(), new VuetifyLoaderPlugin()],
+  plugins: [new VueLoaderPlugin(), new VuetifyLoaderPlugin()]
 };

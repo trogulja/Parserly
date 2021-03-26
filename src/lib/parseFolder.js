@@ -94,8 +94,8 @@ let recursiveInvocation = 0;
  * @param {string} line line to be tested
  * @param {number} lineNr current line number in current file
  * @param {PassableObject} po common PassableObject
- * @param {number} checkIndex 
- * @param {boolean} debug 
+ * @param {number} checkIndex
+ * @param {boolean} debug
  * @returns {claroConfigElement}
  */
 function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
@@ -250,6 +250,7 @@ async function main(inputFolder) {
   }
 
   writeout('Done.');
+  return true;
   // console.log(postWork().reduce((r, c) => Object.assign(r, c), {}));
 }
 
