@@ -56,3 +56,5 @@ _mats/
 # database
 db/parserly.db*
 db/parserly-test.db
+#Electron-builder output
+/dist_electron

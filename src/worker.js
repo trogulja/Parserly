@@ -9,7 +9,7 @@ class CronController {
   static cronjobExecuting = false;
 
   static init() {
-    thisclass = this;
+    const thisclass = this;
     this.cronjob = cron.schedule(
       '*/5 0,8-23 * * *',
       function() {
@@ -45,6 +45,6 @@ class CronController {
   }
 }
 
-module.exports = CronController;
+export default CronController;
 
 // parseFolder('../_mats/logs/HR');
