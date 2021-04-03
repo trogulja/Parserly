@@ -192,6 +192,9 @@ import CronController from './worker';
 notifier.on('ok', message => {
   sendToRenderer('ok', message);
 });
+notifier.on('info', message => {
+  sendToRenderer('info', message);
+});
 
 function sendToRenderer(event, text) {
   const now = new Date();

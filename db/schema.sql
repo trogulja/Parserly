@@ -103,9 +103,29 @@ CREATE TABLE IF NOT EXISTS route (
   error STRING
 );
 
--- Index: name_index
+-- Table: files
+CREATE TABLE IF NOT EXISTS files (
+  id INTEGER PRIMARY KEY NOT NULL,
+  hash STRING NOT NULL UNIQUE,
+  firstLine STRING,
+  firstDate INTEGER,
+  lastLine STRING,
+  lastDate INTEGER
+);
+
+-- Table: config
+CREATE TABLE IF NOT EXISTS config (
+  id INTEGER PRIMARY KEY,
+  [key] STRING UNIQUE,
+  value STRING
+);
+
+-- Index: name_index, days_combo_index, files_hash_index
 CREATE INDEX IF NOT EXISTS name_index ON names (name);
+
 CREATE INDEX IF NOT EXISTS days_combo_index ON days (combo);
+
+CREATE INDEX IF NOT EXISTS files_hash_index ON files (hash);
 
 COMMIT TRANSACTION;
 

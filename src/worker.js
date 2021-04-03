@@ -3,6 +3,8 @@ import parseFolder from './lib/parseFolder';
 // import cronParser from 'cron-parser';
 import cron from 'node-cron';
 import notifier from './lib/util/notifier';
+import paths from './lib/util/pathHandler';
+import path from 'path';
 
 class CronController {
   static cronjob = false;
@@ -15,7 +17,7 @@ class CronController {
       function() {
         notifier.emit('info', 'Starting cronjob.');
         thisclass.cronjobExecuting = true;
-        parseFolder('../_mats/logs/HR').then(() => {
+        parseFolder(path.join(paths.db, '../_mats/logs/HR')).then(() => {
           thisclass.cronjobExecuting = false;
         });
       },
@@ -26,13 +28,13 @@ class CronController {
   static start() {
     if (!this.cronjob) this.init();
     this.cronjob.start();
-    notifier.emit('info', 'Crontab started.')
+    notifier.emit('info', 'Crontab started.');
   }
 
   static stop() {
     if (!this.cronjob) this.init();
     this.cronjob.stop();
-    notifier.emit('info', 'Crontab stopped.')
+    notifier.emit('info', 'Crontab stopped.');
   }
 
   static destroy() {
