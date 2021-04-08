@@ -9,8 +9,8 @@ const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require
 /** @typedef {import('./passableObject').claroConfigElement} claroConfigElement */
 const po = require('./passableObject');
 
-/**
- * Prefix string with date stamp and log to the console
+/** writeout(s, sameline)
+ * - Prefix string with date stamp and log to the console
  * @param {string} s String value that is to be reported
  * @param {boolean} sameline Write to console without newline
  */
@@ -23,8 +23,8 @@ function writeout(s, sameline) {
   }
 }
 
-/**
- * Reports percentage of current parse process
+/** jobStatus(lineNr, totalLines)
+ * - Reports percentage of current parse process
  * @param {number} lineNr Current line number
  * @param {number} totalLines Total lines
  */
@@ -33,8 +33,8 @@ function jobStatus(lineNr, totalLines) {
   writeout(`Job at: ${percent}%`, 0);
 }
 
-/**
- * Counts lines from file and gets meta information
+/** countLines(inputFile, getMeta)
+ * - Counts lines from file and gets meta information
  * @param {FileObject} inputFile file object
  * @param {boolean} getMeta
  * @return {Promise.<{lines: number, firstLine: string, lastLine: string, firstDate: Date, lastDate: Date}>}
@@ -89,8 +89,8 @@ function countLines(inputFile, getMeta) {
 
 let recursiveInvocation = 0;
 
-/**
- * Contextually checks if line matches current config node or one of it's childs or parents
+/** matchLine(line, lineNr, po, checkIndex = null, debug = false)
+ * - Contextually checks if line matches current config node or one of it's childs or parents
  * @param {string} line line to be tested
  * @param {number} lineNr current line number in current file
  * @param {PassableObject} po common PassableObject
@@ -184,7 +184,7 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
 }
 
 /** parseFile(inputFile, po)
- * Reads line by line of inputFile and calls matchLine() on each
+ * - Reads line by line of inputFile and calls matchLine() on each
  * @param {FileObject} inputFile
  * @param {PassableObject} po
  * @return {Promise}
@@ -213,7 +213,7 @@ function parseFile(inputFile, po) {
 }
 
 /** main(inputFolder)
- * Main logic function - takes in path and does all the work
+ * - Main logic function - takes in path and does all the work
  * @param {string} inputFolder path to directory
  * @return
  */
@@ -260,7 +260,7 @@ async function main(inputFolder) {
  * @property {number} written Number of items written in the database
  */
 
-/**
+/** digestAll(po)
  * Calls individual digests and combines returns into one
  * @param {PassableObject} po common Passable object
  * @return {{names: dbResult, days: dbResult, pObj: dbResult, pImg: dbResult, pIns: dbResult, route: dbResult, purge: dbResult}} number of items collected and written to the database
@@ -275,7 +275,7 @@ const digestAll = po => {
 };
 
 /** digestNames(po)
- * Writes names set to database, reports status, clears names set
+ * - Writes names set to database, reports status, clears names set
  * @param {PassableObject} po common Passable object
  * @return {{names: dbResult}} Number of names collected and written to the database
  */
@@ -288,7 +288,7 @@ const digestNames = po => {
 };
 
 /** digestDays(po)
- * Writes days set to database, reports status, clears days set
+ * - Writes days set to database, reports status, clears days set
  * @param {PassableObject} po common Passable object
  * @return {{days: dbResult}} Number of days collected and written to the database
  */
@@ -301,7 +301,7 @@ const digestDays = po => {
 };
 
 /** digestImages(po)
- * Writes images (pObj, pImg, pIns) array to database, reports status, clears referenced po.output array
+ * - Writes images (pObj, pImg, pIns) array to database, reports status, clears referenced po.output array
  * @param {PassableObject} po common Passable object
  * @return {{pObj: dbResult, pImg: dbResult, pIns: dbResult}} Number of images collected and written to the database
  */
@@ -331,7 +331,7 @@ const digestImages = po => {
 };
 
 /** digestRoutes(po)
- * Writes routes array to database, reports status, clears po.output.route array
+ * - Writes routes array to database, reports status, clears po.output.route array
  * @param {PassableObject} po common Passable object
  * @return {{route: dbResult}} Number of routes collected and written to the database
  */
@@ -344,7 +344,7 @@ const digestRoutes = po => {
 };
 
 /** digestPurges(po)
- * Writes purges array to database, reports status, clears po.output.purge array
+ * - Writes purges array to database, reports status, clears po.output.purge array
  * @param {PassableObject} po common Passable object
  * @return {{purge: dbResult}} Number of purges collected and written to the database
  */
@@ -356,8 +356,8 @@ const digestPurges = po => {
   return { purge };
 };
 
-/**
- * Extracts count and id from config nodes and flattens it into single array
+/** postWork(array, parent)
+ * - Extracts count and id from config nodes and flattens it into single array
  * @param {Object} [array] config array called when method recurses
  * @param {string} [parent] obsolete?
  * @return {Array.<Object.<string, number>>}

@@ -77,9 +77,10 @@ async function getFiles2(dir) {
       .map(async file => {
         const fullpath = path.resolve(dir, file);
         const status = await fs.stat(fullpath);
+        const hash = await createHashFromFile(fullpath);
         return {
           path: fullpath,
-          hash: createHashFromFile(fullpath),
+          hash: hash,
           name: file,
           dir: path.resolve(dir),
           size: status.size,
@@ -108,4 +109,4 @@ const createHashFromFile = filePath =>
   });
 
 module.exports = getFiles2;
-// getFiles2('../_mats/logs/HR').then(console.log);
+getFiles2('../../_mats/logs/HR').then(console.log);
