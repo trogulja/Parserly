@@ -1,5 +1,11 @@
 const db = require('./index');
 
+/**
+ * Gets key value pairs from config table and everything from files table
+ * - config = key: value
+ * - files = Map(hash, files.row)
+ * @returns {{ config: {}, files: [] }}
+ */
 const getConfig = () => {
   try {
     const query1 = db.prepare('SELECT * FROM config');
@@ -23,4 +29,5 @@ const getConfig = () => {
   }
 };
 
-module.exports = getConfig;
+const config = getConfig();
+module.exports = config;

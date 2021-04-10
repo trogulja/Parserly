@@ -1,5 +1,6 @@
 const config = require('./config');
 const tables = ['crop', 'dlink', 'pImg', 'pIns', 'pObj', 'purge', 'route', 'system'];
+const dbConfig = require('./db/getConfig');
 
 /** PassableObject
  * Passable object
@@ -19,6 +20,8 @@ const tables = ['crop', 'dlink', 'pImg', 'pIns', 'pObj', 'purge', 'route', 'syst
  * @property {Set} days all date values in YYYYMMDD format should end up in here
  * @property {Set} configPointer set of config nodes that add context to log parsing
  * @property {Array.<claroConfigElement>} config - configuration data tree
+ * @property {Object} rule key value pairs from database table config
+ * @property {Map.<filesHash, filesRow>} file hash: files.row - file information previously stored in the db
  */
 
 /** claroConfigElement
@@ -132,6 +135,23 @@ const tables = ['crop', 'dlink', 'pImg', 'pIns', 'pObj', 'purge', 'route', 'syst
  * @typedef {Object} dataSystem
  */
 
+/** filesHash
+ * - SHA1 hash of that file
+ * @typedef {string} filesHash
+ */
+
+/** filesRow
+ * Additional file information
+ * @typedef {Object} filesRow
+ * @property {number} id ID
+ * @property {filesHash} hash SHA1 hash value
+ * @property {number} lines number of lines file has
+ * @property {string} firstLine first line to contain useful info in the file
+ * @property {number} firstDate UNIX timestamp made from firstLine
+ * @property {string} lastLine last line to contain useful info in the file
+ * @property {number} lastDate UNIX timestamp made from lastLine
+ */
+
 /**
  * @type {PassableObject}
  */
@@ -142,13 +162,15 @@ const po = {
   days: new Set(),
   configPointer: new Set(),
   config,
+  rule: dbConfig.config,
+  file: dbConfig.files
 };
 
-tables.forEach((el) => {
+tables.forEach(el => {
   po.detected[el] = {};
   po.output[el] = [];
 });
 
-po.configPointer.add(po.config)
+po.configPointer.add(po.config);
 
 module.exports = po;

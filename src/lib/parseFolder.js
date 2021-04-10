@@ -5,6 +5,7 @@ const getFiles = require('./getFiles');
 const config = require('./config');
 const fns = require('./actions');
 const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require('./db/tools');
+const writeFiles = require('./db/writeFiles');
 /** @typedef {import('./passableObject').PassableObject} PassableObject */
 /** @typedef {import('./passableObject').claroConfigElement} claroConfigElement */
 const po = require('./passableObject');
@@ -222,14 +223,20 @@ async function main(inputFolder) {
   writeout('Collecting file metadata...');
 
   try {
+    const missing = [];
     for (const file of files) {
-      const result = await countLines(file.path, true);
-      file.lines = result.lines;
-      file.firstDate = result.firstDate;
-      file.firstLine = result.firstLine;
-      file.lastDate = result.lastDate;
-      file.lastLine = result.lastLine;
+      if (!po.file.has(file.hash)) {
+        const result = await countLines(file.path, true);
+        file.lines = result.lines;
+        file.firstDate = result.firstDate;
+        file.firstLine = result.firstLine;
+        file.lastDate = result.lastDate;
+        file.lastLine = result.lastLine;
+        missing.push({ hash: file.hash, ...result });
+        po.file.set(file.hash, { hash: file.hash, ...result });
+      }
     }
+    if (missing.length) writeFiles(missing);
   } catch (error) {
     console.log(error);
     return error;
