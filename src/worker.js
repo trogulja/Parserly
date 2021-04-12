@@ -15,8 +15,9 @@ class CronController {
     this.cronjob = cron.schedule(
       '*/5 0,8-23 * * *',
       function() {
-        notifier.emit('info', 'Starting cronjob.');
+        notifier.emit('log', { event: 'info', text: 'Running scheduled cronjob.', meta: { job: 'cron', status: 'run' } });
         thisclass.cronjobExecuting = true;
+        // TODO - programatically choose where to parse from!
         parseFolder(path.join(paths.db, '../_mats/logs/HR')).then(() => {
           thisclass.cronjobExecuting = false;
         });
@@ -28,13 +29,13 @@ class CronController {
   static start() {
     if (!this.cronjob) this.init();
     this.cronjob.start();
-    notifier.emit('info', 'Crontab started.');
+    notifier.emit('log', { event: 'info', text: 'Crontab started.', meta: { job: 'cron', status: 'start' } });
   }
 
   static stop() {
     if (!this.cronjob) this.init();
     this.cronjob.stop();
-    notifier.emit('info', 'Crontab stopped.');
+    notifier.emit('log', { event: 'info', text: 'Crontab stopped.', meta: { job: 'cron', status: 'stop' } });
   }
 
   static destroy() {
@@ -42,7 +43,7 @@ class CronController {
       this.cronjob.stop();
       this.cronjob.destroy();
       this.cronjob = false;
-      notifier.emit('info', 'Crontab destroyed.');
+      notifier.emit('log', { event: 'info', text: 'Crontab destroyed.', meta: { job: 'cron', status: 'destroy' } });
     }
   }
 }

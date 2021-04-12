@@ -9,6 +9,7 @@ const crypto = require('crypto');
  * Complete information about file
  * @typedef {Object} FileObject
  * @property {string} path full path + filename + extension - ready to pass on
+ * @property {string} hash SHA1 hash for this file
  * @property {string} name filename with extension
  * @property {string} dir folder in which filename resides
  * @property {number} size file size in bytes
@@ -18,9 +19,9 @@ const crypto = require('crypto');
  * @property {number} t_changed time value in ms
  * @property {number} t_accessed time value in ms
  * @property {number} [lines] number of lines in file
- * @property {Date} [firstDate] date object: first encountered date in file
+ * @property {number} [firstDate] date value: first encountered date in file UNIX timestamp
  * @property {string} [firstLine] first line in file that contains date
- * @property {Date} [lastDate] date object: last encountered date in file
+ * @property {number} [lastDate] date value: last encountered date in file UNIX timestamp
  * @property {string} [lastLine] last line in file that contains date
  */
 
@@ -53,10 +54,10 @@ async function getFiles(dir) {
           dir: path.resolve(dir),
           size: status.size,
           humanSize: fileSizeSI(status.size),
-          t_created: status.birthtimeMs,
-          t_modified: status.mtimeMs,
-          t_changed: status.ctimeMs,
-          t_accessed: status.atimeMs
+          t_created: Math.floor(status.birthtimeMs),
+          t_modified: Math.floor(status.mtimeMs),
+          t_changed: Math.floor(status.ctimeMs),
+          t_accessed: Math.floor(status.atimeMs)
         };
       })
       .reverse()
@@ -67,7 +68,7 @@ async function getFiles(dir) {
 /** getFiles2(dir)
  * - Reads files from dir - test files, they are in correct order
  * @param {string} dir path to directory
- * @return {FileObject}
+ * @return {Array.<FileObject>}
  */
 async function getFiles2(dir) {
   const rawContents = await fs.readdir(dir);
@@ -85,10 +86,10 @@ async function getFiles2(dir) {
           dir: path.resolve(dir),
           size: status.size,
           humanSize: fileSizeSI(status.size),
-          t_created: status.birthtimeMs,
-          t_modified: status.mtimeMs,
-          t_changed: status.ctimeMs,
-          t_accessed: status.atimeMs
+          t_created: Math.floor(status.birthtimeMs),
+          t_modified: Math.floor(status.mtimeMs),
+          t_changed: Math.floor(status.ctimeMs),
+          t_accessed: Math.floor(status.atimeMs)
         };
       })
   );
@@ -109,4 +110,4 @@ const createHashFromFile = filePath =>
   });
 
 module.exports = getFiles2;
-getFiles2('../../_mats/logs/HR').then(console.log);
+// getFiles2('../../_mats/logs/HR').then(console.log);

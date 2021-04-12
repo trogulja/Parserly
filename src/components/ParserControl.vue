@@ -50,10 +50,11 @@ export default {
     return {
       loading: false,
       icons: {
-        ok: { icon: 'mdi-checkbox-marked-outline', color: 'green' },
+        debug: { icon: 'mdi-checkbox-marked-outline', color: 'green' },
+        progress: { icon: 'mdi-checkbox-marked-outline', color: 'primary' },
         info: { icon: 'mdi-alert-circle-check-outline', color: 'info' },
         warn: { icon: 'mdi-alert-outline', color: 'orange' },
-        error: { icon: 'mdi-alert-octagram-outline', color: 'red' }
+        error: { icon: 'mdi-alert-octagram-outline', color: 'red' },
       },
       logs: [],
       crontab: false

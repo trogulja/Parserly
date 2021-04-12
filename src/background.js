@@ -189,20 +189,37 @@ log.catchErrors({
 import notifier from './lib/util/notifier';
 import CronController from './worker';
 
-notifier.on('ok', message => {
-  sendToRenderer('ok', message);
-});
-notifier.on('info', message => {
-  sendToRenderer('info', message);
+notifier.on('log', message => {
+  sendToRenderer(message);
 });
 
-function sendToRenderer(event, text) {
+/** logMessage
+ * Message used to communicate between backend and frontend
+ * @typedef {Object} logMessage
+ * @property {string} event event type: debug, progress, info, warn, error
+ * @property {string} time time value in hh:mm:ss format
+ * @property {string} text message that will be shown to the user
+ * @property {Object} meta key value pairs describing this event (for jobs)
+ * @property {string} meta.job name of the job this refers to
+ * @property {string} meta.status what is happening with this job
+ */
+
+/** sendToRenderer(message)
+ * Send information to renderer process:
+ * - debug - verbose information for debugging purposes, shown in console.log
+ * - progress - current job percentage
+ * - info - general overview about what's going on in the back
+ * - warn - handled errors or events we worry about
+ * - error - cought errors
+ * @param {logMessage} message message we are sending to renderer proc
+ */
+function sendToRenderer(message) {
   const now = new Date();
   const hours = now.getHours();
   const minutes = now.getMinutes() < 10 ? `0${now.getMinutes()}` : now.getMinutes();
   const seconds = now.getSeconds() < 10 ? `0${now.getSeconds()}` : now.getSeconds();
   const time = `${hours}:${minutes}:${seconds}`;
-  win.webContents.send('log', { event, time, text });
+  win.webContents.send('log', { ...message, time });
 }
 
 ipcMain.on('job', async function(event, arg) {

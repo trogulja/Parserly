@@ -6,9 +6,31 @@ const config = require('./config');
 const fns = require('./actions');
 const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require('./db/tools');
 const writeFiles = require('./db/writeFiles');
+const notifier = require('./util/notifier');
 /** @typedef {import('./passableObject').PassableObject} PassableObject */
 /** @typedef {import('./passableObject').claroConfigElement} claroConfigElement */
 const po = require('./passableObject');
+
+/** constructStartDate()
+ * - Sets the start date to the start of previous month
+ * @returns {number} UNIX timestamp, date value integer
+ */
+function constructStartDate() {
+  const date = new Date();
+  date.setMonth(date.getMonth() - 1, 1);
+  date.setHours(0, 0, 0, 1);
+  return date.getTime();
+}
+
+/** croDate(n)
+ * - Transforms UNIX timestamp to date string for easier reading (croatian locale)
+ * @param {number} n UNIX timestamp
+ * @returns {string} Date in D.M.YYYY format
+ */
+function croDate(n) {
+  const date = new Date(n);
+  return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
+}
 
 /** writeout(s, sameline)
  * - Prefix string with date stamp and log to the console
@@ -24,6 +46,15 @@ function writeout(s, sameline) {
   }
 }
 
+/** writedebug(s)
+ * - Logging for debugging purposes
+ * @param {string} s String value that we are reporting to the console and to the notifier
+ */
+function writedebug(s, from) {
+  console.log(s);
+  if (s) notifier.emit('log', { event: 'debug', text: s, meta: { job: `parser-${from}` } });
+}
+
 /** jobStatus(lineNr, totalLines)
  * - Reports percentage of current parse process
  * @param {number} lineNr Current line number
@@ -32,13 +63,14 @@ function writeout(s, sameline) {
 function jobStatus(lineNr, totalLines) {
   const percent = parseInt((lineNr / totalLines) * 100);
   writeout(`Job at: ${percent}%`, 0);
+  notifier.emit('log', { event: 'progress', text: `Job at: ${percent}%`, meta: { job: 'parser-jobStatus', status: percent } });
 }
 
 /** countLines(inputFile, getMeta)
  * - Counts lines from file and gets meta information
  * @param {FileObject} inputFile file object
  * @param {boolean} getMeta
- * @return {Promise.<{lines: number, firstLine: string, lastLine: string, firstDate: Date, lastDate: Date}>}
+ * @return {Promise.<{lines: number, firstLine: string, lastLine: string, firstDate: number, lastDate: number}>}
  */
 function countLines(inputFile, getMeta) {
   return new Promise((resolve, reject) => {
@@ -58,6 +90,7 @@ function countLines(inputFile, getMeta) {
     let file;
     const report = setInterval(() => {
       writeout(`Total of ${num} lines detected.`, 1);
+      notifier.emit('log', { event: 'progress', text: `Total of ${num} lines detected.`, meta: { job: 'parser-countLines', status: num } });
     }, 500);
 
     file = new LineByLineReader(inputFile);
@@ -68,10 +101,10 @@ function countLines(inputFile, getMeta) {
         if (res) {
           if (!firstLine) {
             firstLine = line;
-            firstDate = new Date(res[1], res[2] - 1, res[3], res[4], res[5], res[6], res[7]);
+            firstDate = new Date(res[1], res[2] - 1, res[3], res[4], res[5], res[6], res[7]).getTime();
           }
           lastLine = line;
-          lastDate = new Date(res[1], res[2] - 1, res[3], res[4], res[5], res[6], res[7]);
+          lastDate = new Date(res[1], res[2] - 1, res[3], res[4], res[5], res[6], res[7]).getTime();
         }
       }
       num++;
@@ -83,6 +116,7 @@ function countLines(inputFile, getMeta) {
     file.on('end', () => {
       clearInterval(report);
       writeout(`Total of ${num} lines detected. (${path.basename(inputFile)})`);
+      notifier.emit('log', { event: 'info', text: `Total of ${num} lines detected. (${path.basename(inputFile)})`, meta: { job: 'parser-countLines', status: 'end' } });
       return resolve({ lines: num, firstLine, lastLine, firstDate, lastDate });
     });
   });
@@ -117,17 +151,17 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
       else out_s = '';
       out_s += p[0].id;
     }
-    console.log();
-    console.log(`[${currentInvocation}] invoking this function for the ${currentInvocation}. time`);
-    console.log(`[${currentInvocation}] pointer has ${out_i} members: ${out_s}`);
-    console.log(`[${currentInvocation}]`, lineNr, line);
+    writedebug();
+    writedebug(`[${currentInvocation}] invoking this function for the ${currentInvocation}. time`, 'matchLine');
+    writedebug(`[${currentInvocation}] pointer has ${out_i} members: ${out_s}`, 'matchLine');
+    writedebug(`[${currentInvocation}] ${lineNr} ${line}`, 'matchLine');
   }
 
   let pointerIndex = 0;
   for (const [pointer, pointerCopy] of po.configPointer.entries()) {
     if (checkIndex) if (pointerIndex < checkIndex) continue; // in recursion, we want to check only previously unchecked lines
-    if (debug) console.log(`[${currentInvocation}] checking siblings of ${pointer[0].id} for match...`);
-    if (debug) console.log(`[${currentInvocation}] pointerIndex = ${pointerIndex}, checkIndex = ${checkIndex}`);
+    if (debug) writedebug(`[${currentInvocation}] checking siblings of ${pointer[0].id} for match...`, 'matchLine');
+    if (debug) writedebug(`[${currentInvocation}] pointerIndex = ${pointerIndex}, checkIndex = ${checkIndex}`, 'matchLine');
     for (const item of pointer) {
       if (item.match.test(line)) {
         item.count++;
@@ -149,13 +183,13 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
 
   if (checkIndex) return matched; // in recursion, we want to stop here
 
-  if (debug) console.log(`[${currentInvocation}] after sibling search matched is ${matched ? matched.id : !!matched}`);
+  if (debug) writedebug(`[${currentInvocation}] after sibling search matched is ${matched ? matched.id : !!matched}`, 'matchLine');
 
   if (!matched) {
     let i = 0;
     for (const [pointer, pointerCopy] of po.configPointer.entries()) {
       // if (checkIndex) if (pointerIndex < checkIndex) continue; // in recursion, we want to check only previously unchecked lines
-      if (debug) console.log(`[${currentInvocation}] Checking for parents pointer: ${pointer[0].id}`);
+      if (debug) writedebug(`[${currentInvocation}] Checking for parents pointer: ${pointer[0].id}`, 'matchLine');
       if (pointer[0] && pointer[0].parent) {
         if (pointer[0].parent.parent) {
           po.configPointer.add(pointer[0].parent.parent.children);
@@ -170,10 +204,10 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
     matched = i ? matchLine(line, lineNr, po, i) : false;
   }
 
-  if (debug) console.log(`[${currentInvocation}] after recursion matched is ${matched ? matched.id : !!matched}`);
+  if (debug) writedebug(`[${currentInvocation}] after recursion matched is ${matched ? matched.id : !!matched}`, 'matchLine');
 
   if (!matched) {
-    if (debug) console.log(`[${currentInvocation}]`, lineNr, 'unseen line:', line);
+    if (debug) writedebug(`[${currentInvocation}] ${lineNr} unseen line: ${line}`, 'matchLine');
   } else {
     if (fns[matched.act]) {
       // console.log(`${matched.id} -> ${matched.act}`);
@@ -221,6 +255,7 @@ function parseFile(inputFile, po) {
 async function main(inputFolder) {
   const files = await getFiles(inputFolder);
   writeout('Collecting file metadata...');
+  notifier.emit('log', { event: 'info', text: 'Collecting file metadata...', meta: { job: 'parser-main', status: 'start metadataCollecting' } });
 
   try {
     const missing = [];
@@ -239,16 +274,33 @@ async function main(inputFolder) {
     if (missing.length) writeFiles(missing);
   } catch (error) {
     console.log(error);
+    notifier.emit('log', { event: 'error', text: JSON.stringify(error), meta: { job: 'parser-main', status: 'error writeFiles' } });
     return error;
   }
 
   writeout('Started parsing files...');
+  notifier.emit('log', { event: 'info', text: 'Started parsing files...', meta: { job: 'parser-main', status: 'start parsing' } });
+
+  // TODO - make startDate constructable by user
+  if (!po.rule.startDate) po.rule.startDate = constructStartDate();
+
   for (const file of files) {
+    if (file.lastDate < po.rule.startDate) {
+      writeout(`Skipping ${file.name} because file.lastDate (${croDate(file.lastDate)}) < rule.startDate (${croDate(po.rule.startDate)})`);
+      notifier.emit('log', {
+        event: 'info',
+        text: `Skipping ${file.name} because file.lastDate (${croDate(file.lastDate)}) < rule.startDate (${croDate(po.rule.startDate)})`,
+        meta: { job: 'parser-main', status: 'skip parsingFile' }
+      });
+      continue;
+    }
+
     writeout(`Parsing ${file.name}`);
+    notifier.emit('log', { event: 'info', text: `Parsing ${file.name}`, meta: { job: 'parser-main', status: 'start parsingFile' } });
     // TODO: test if we already parsed this file
     await parseFile(file, po);
     for (const key in po.output) {
-      if (po.output[key].length) console.log({ [key]: po.output[key].length });
+      if (po.output[key].length) writedebug(`[${key}]: ${po.output[key].length}`, 'main');
     }
 
     digestAll(po);
@@ -257,6 +309,7 @@ async function main(inputFolder) {
   }
 
   writeout('Done.');
+  notifier.emit('log', { event: 'info', text: 'Done.', meta: { job: 'parser-main', status: 'end' } });
   return true;
   // console.log(postWork().reduce((r, c) => Object.assign(r, c), {}));
 }
@@ -289,7 +342,7 @@ const digestAll = po => {
 const digestNames = po => {
   const result = writeNames(po.names);
   const names = { collected: po.names.size, written: result.reduce((acc, val) => acc + val.changes, 0) };
-  console.log(`Collected ${names.collected} names, written ${names.written} in db.`);
+  writedebug(`Collected ${names.collected} names, written ${names.written} in db.`, 'digestNames');
   po.names.clear();
   return { names };
 };
@@ -302,7 +355,7 @@ const digestNames = po => {
 const digestDays = po => {
   const result = writeDays(po.days);
   const days = { collected: po.days.size, written: result.reduce((acc, val) => acc + val.changes, 0) };
-  console.log(`Collected ${days.collected} days, written ${days.written} in db.`);
+  writedebug(`Collected ${days.collected} days, written ${days.written} in db.`, digestDays);
   po.days.clear();
   return { days };
 };
@@ -328,11 +381,11 @@ const digestImages = po => {
       written: result.pIns.reduce((acc, val) => acc + val.changes, 0)
     }
   };
-  console.log(`Collected ${po.output.pObj.length} objects, written ${result.pObj.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  writedebug(`Collected ${po.output.pObj.length} objects, written ${result.pObj.reduce((acc, val) => acc + val.changes, 0)} in db.`, 'digestImages');
   po.output.pObj = [];
-  console.log(`Collected ${po.output.pImg.length} images, written ${result.pImg.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  writedebug(`Collected ${po.output.pImg.length} images, written ${result.pImg.reduce((acc, val) => acc + val.changes, 0)} in db.`, 'digestImages');
   po.output.pImg = [];
-  console.log(`Collected ${po.output.pIns.length} inspects, written ${result.pIns.reduce((acc, val) => acc + val.changes, 0)} in db.`);
+  writedebug(`Collected ${po.output.pIns.length} inspects, written ${result.pIns.reduce((acc, val) => acc + val.changes, 0)} in db.`, 'digestImages');
   po.output.pIns = [];
   return images;
 };
@@ -345,7 +398,7 @@ const digestImages = po => {
 const digestRoutes = po => {
   const result = writeRoutes(po.output.route);
   const route = { collected: po.output.route.length, written: result.reduce((acc, val) => acc + val.changes, 0) };
-  console.log(`Collected ${route.collected} routes, written ${route.written} in db.`);
+  writedebug(`Collected ${route.collected} routes, written ${route.written} in db.`, 'digestRoutes');
   po.output.route = [];
   return { route };
 };
@@ -358,7 +411,7 @@ const digestRoutes = po => {
 const digestPurges = po => {
   const result = writePurges(po.output.purge);
   const purge = { collected: po.output.purge.length, written: result.reduce((acc, val) => acc + val.changes, 0) };
-  console.log(`Collected ${purge.collected} purges, written ${purge.written} in db.`);
+  writedebug(`Collected ${purge.collected} purges, written ${purge.written} in db.`, 'digestPurges');
   po.output.purge = [];
   return { purge };
 };
