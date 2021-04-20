@@ -10,9 +10,7 @@ class CronController {
   constructor() {
     this.cronjob = false;
     this.cronjobExecuting = false;
-    this.folder = paths.logs;
-    // TODO - programatically choose where to parse from!
-    this.target = path.join(paths.db, this.folder);
+    this.target = paths.logs;
 
     this.cronPayload = async () => {
       if (this.cronjobExecuting) {

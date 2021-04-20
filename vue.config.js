@@ -17,7 +17,12 @@ module.exports = {
       externals: ['better-sqlite3'],
       mainProcessFile: 'src/background.js',
       rendererProcessFile: 'src/main.js',
-      removeElectronJunk: true
+      removeElectronJunk: true,
+      builderOptions: {
+        win: {
+          icon: './public/android-chrome-512x512.png'
+        }
+      }
     }
   },
 };

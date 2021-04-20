@@ -102,8 +102,10 @@
   "publish": [
     {
       "provider": "github",
+      "private": true,
       "owner": "trogulja",
-      "repo": "Compiley",
+      "repo": "Parserly",
+      "token": "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",
       "releaseType": "draft"
     }
   ],

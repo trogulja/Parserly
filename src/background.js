@@ -206,6 +206,8 @@ ipcMain.on('job', async function(event, arg) {
   if (arg === 'start') {
     CronController.start();
     win.webContents.send('job', 'started');
+    notifier.log({ event: 'log', text: `Target folder is ${paths.logs}`, meta: { job: 'ipcMain-on-job', status: 'event' } });
+    notifier.log({ event: 'log', text: `Target db is ${paths.database}`, meta: { job: 'ipcMain-on-job', status: 'event' } });
   }
   if (arg === 'stop') {
     CronController.stop();
