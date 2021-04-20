@@ -70,6 +70,7 @@ async function createWindow() {
     let title = name + ' app v' + version;
     win.setTitle(title);
     win.webContents.send('title', { name, version, title });
+    messageHandler = new MessageHandler(win);
   });
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
@@ -187,52 +188,50 @@ log.catchErrors({
 
 // Data handle logic
 import notifier from './lib/util/notifier';
-import CronController from './worker';
+import CronController from './cronController';
+import MessageHandler from './lib/util/messageHandler';
+let messageHandler; // define it in did-finish-load part
 
 notifier.on('log', message => {
-  sendToRenderer(message);
+  if (messageHandler) messageHandler.log(message);
 });
-
-/** logMessage
- * Message used to communicate between backend and frontend
- * @typedef {Object} logMessage
- * @property {string} event event type: debug, progress, info, warn, error
- * @property {string} time time value in hh:mm:ss format
- * @property {string} text message that will be shown to the user
- * @property {Object} meta key value pairs describing this event (for jobs)
- * @property {string} meta.job name of the job this refers to
- * @property {string} meta.status what is happening with this job
- */
-
-/** sendToRenderer(message)
- * Send information to renderer process:
- * - debug - verbose information for debugging purposes, shown in console.log
- * - progress - current job percentage
- * - info - general overview about what's going on in the back
- * - warn - handled errors or events we worry about
- * - error - cought errors
- * @param {logMessage} message message we are sending to renderer proc
- */
-function sendToRenderer(message) {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes() < 10 ? `0${now.getMinutes()}` : now.getMinutes();
-  const seconds = now.getSeconds() < 10 ? `0${now.getSeconds()}` : now.getSeconds();
-  const time = `${hours}:${minutes}:${seconds}`;
-  win.webContents.send('log', { ...message, time });
-}
+notifier.on('debug', message => {
+  if (messageHandler) messageHandler.debug(message);
+});
+notifier.on('progress', message => {
+  if (messageHandler) messageHandler.progress(message);
+});
 
 ipcMain.on('job', async function(event, arg) {
   if (arg === 'start') {
     CronController.start();
-    setTimeout(() => {
-      win.webContents.send('job', 'started');
-    }, 1000);
+    win.webContents.send('job', 'started');
   }
   if (arg === 'stop') {
     CronController.stop();
-    setTimeout(() => {
-      win.webContents.send('job', 'stopped');
-    }, 1000);
+    win.webContents.send('job', 'stopped');
+  }
+  if (arg === 'forceStart') {
+    CronController.forceStart();
   }
 });
+
+// Express logic
+import express from 'express';
+import cors from 'cors';
+const paths = require('./lib/util/pathHandler');
+const httpd = express();
+const httpdPublicDir = path.join(paths.root, 'public', 'express');
+
+httpd.use(express.json({ limit: '10MB' }));
+httpd.use(cors());
+
+httpd.use('/api/data', require('./api/data'));
+httpd.use(express.static(httpdPublicDir));
+httpd.get(/.*/, (req, res) => {
+  console.log('Sending SPA index.html from', path.join(httpdPublicDir, 'index.html'));
+  return res.sendFile(path.join(httpdPublicDir, 'index.html'));
+});
+
+const httpdPort = 8125;
+httpd.listen(httpdPort, () => console.log(`Server started on port ${httpdPort}`));

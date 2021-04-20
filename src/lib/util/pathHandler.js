@@ -22,17 +22,46 @@
 
 const path = require('path');
 const fs = require('fs');
-const { app } = require('electron')
-const paths = { root: '', db: '' };
+const { app } = require('electron');
+const paths = { root: '', db: '', logs: null };
 
-let appType = 'prod';
-if (process.execPath.search('electron.exe') >= 0) appType = 'dev';
-if (process.execPath.search('node.exe') >= 0) appType = 'test';
+let appType = 'production';
+if (process.execPath.search('electron.exe') >= 0) appType = 'development';
+if (process.execPath.search('node.exe') >= 0) appType = 'testing';
 if (process.execPath.search('AppData') >= 0) appType = 'installed';
 
-if (appType === 'prod') {
+let testDir;
+try {
+  testDir = path.join('C:', 'Program Files', 'Elpical Claro', 'log');
+  console.log('testing %s', testDir);
+  if (fs.statSync(testDir).isDirectory()) paths.logs = testDir;
+} catch (error) {
+  console.log('dir1 does not exist');
+}
+
+if (!paths.logs) {
+  try {
+    testDir = path.join('E:', 'code', 'Apps', 'Parserly', '_mats', 'logs', 'HR');
+    console.log('testing %s', testDir);
+    if (fs.statSync(testDir).isDirectory()) paths.logs = testDir;
+  } catch (error) {
+    console.log('dir2 does not exist');
+  }
+}
+
+if (!paths.logs) {
+  try {
+    testDir = path.join(app.getPath('home'), 'code', 'Apps', 'Parserly', '_mats', 'logs', 'HR');
+    console.log('testing %s', testDir);
+    if (fs.statSync(testDir).isDirectory()) paths.logs = testDir;
+  } catch (error) {
+    console.log('dir3 does not exist');
+  }
+}
+
+if (appType === 'production') {
   paths.root = path.join(path.dirname(process.execPath), 'resources');
-} else if (appType === 'dev' || appType == 'test') {
+} else if (appType === 'development' || appType == 'testing') {
   let frag = __dirname.split(path.sep);
   let searchable = false;
 

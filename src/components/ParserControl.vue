@@ -7,6 +7,23 @@
             <v-col class="px-10 d-flex align-center justify-center">
               <v-switch v-model="crontab" inset :label="`Crontab is ${loading ? '...' : crontab ? 'on' : 'off'}`" :disabled="loading" :loading="loading" @change="switchCrontab" />
               <v-spacer />
+              <v-btn @click="forceStart()">Parse!</v-btn>
+            </v-col>
+          </v-row>
+          <v-row class="pa-0 ma-0">
+            <v-col class="pa-0 ma-0" cols="12">
+              <v-progress-linear v-model="progressTotal" color="orange" height="25" :active="progressTotalActive">
+                <template v-slot:default>
+                  <strong> {{ progressTotalCurrent }} / {{ progressTotalAll }} </strong>
+                </template>
+              </v-progress-linear>
+            </v-col>
+            <v-col class="pa-0 ma-0" cols="12">
+              <v-progress-linear v-model="progress" color="primary" height="25" :active="progressActive">
+                <template v-slot:default="{ value }">
+                  <strong>{{ Math.ceil(value) }}%</strong>
+                </template>
+              </v-progress-linear>
             </v-col>
           </v-row>
           <v-row>
@@ -54,10 +71,16 @@ export default {
         progress: { icon: 'mdi-checkbox-marked-outline', color: 'primary' },
         info: { icon: 'mdi-alert-circle-check-outline', color: 'info' },
         warn: { icon: 'mdi-alert-outline', color: 'orange' },
-        error: { icon: 'mdi-alert-octagram-outline', color: 'red' },
+        error: { icon: 'mdi-alert-octagram-outline', color: 'red' }
       },
       logs: [],
-      crontab: false
+      crontab: false,
+      progress: 0,
+      progressActive: false,
+      progressTotal: 0,
+      progressTotalActive: false,
+      progressTotalAll: 0,
+      progressTotalCurrent: 0
     };
   },
 
@@ -69,13 +92,50 @@ export default {
       if (arg === 'stopped') thisclass.crontab = false;
     });
     window.ipcRenderer.on('log', function(event, arg) {
+      if (arg.event === 'progress') return;
       thisclass.logs.unshift(arg);
       if (thisclass.logs.length > 30) thisclass.logs.length = 30;
+    });
+    window.ipcRenderer.on('debug', function(event, arg) {
+      console.log(arg);
+    });
+    window.ipcRenderer.on('progress', function(event, arg) {
+      console.log(arg);
+      if (arg.event === 'start' && arg.meta.status === 'file') {
+        thisclass.progress = 0;
+        thisclass.progressActive = true;
+        console.log('Progress start received!');
+        return;
+      }
+      if (arg.event === 'end' && arg.meta.status === 'file') {
+        thisclass.progressActive = false;
+        thisclass.progress = 0;
+        console.log('Progress end received!');
+        return;
+      }
+
+      if (arg.event === 'start' && arg.meta.status === 'job') {
+        thisclass.progressTotalCurrent = Number(/file (\d+)/i.exec(arg.text)[1]);
+        thisclass.progressTotalAll = Number(/of (\d+) total/i.exec(arg.text)[1]);
+        thisclass.progressTotalActive = true;
+        thisclass.progressTotal = thisclass.progressTotalCurrent / thisclass.progressTotalAll * 100;
+        console.log('Progress total start received!');
+        return;
+      }
+
+      if (arg.event === 'end' && arg.meta.status === 'job') {
+        thisclass.progressTotalActive = false;
+        thisclass.progressTotal = 0;
+        console.log('Progress total end received!');
+        return;
+      }
+
+      thisclass.progress = arg.meta.status;
     });
     setTimeout(() => {
       thisclass.loading = true;
       thisclass.crontab = true;
-      window.ipcRenderer.send('job', 'start');
+      window.ipcRenderer.send('job', 'stop');
     }, 500);
   },
 
@@ -85,6 +145,9 @@ export default {
     },
     stop: function() {
       this.loading = false;
+    },
+    forceStart: function() {
+      window.ipcRenderer.send('job', 'forceStart');
     },
     switchCrontab: function(state) {
       this.loading = true;

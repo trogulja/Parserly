@@ -6,7 +6,7 @@ const config = require('./config');
 const fns = require('./actions');
 const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require('./db/tools');
 const writeFiles = require('./db/writeFiles');
-const notifier = require('./util/notifier');
+import notifier from './util/notifier';
 /** @typedef {import('./passableObject').PassableObject} PassableObject */
 /** @typedef {import('./passableObject').claroConfigElement} claroConfigElement */
 const po = require('./passableObject');
@@ -32,29 +32,6 @@ function croDate(n) {
   return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
 }
 
-/** writeout(s, sameline)
- * - Prefix string with date stamp and log to the console
- * @param {string} s String value that is to be reported
- * @param {boolean} sameline Write to console without newline
- */
-function writeout(s, sameline) {
-  const ts = `[${new Date().toTimeString().split(' ')[0]}]`;
-  if (sameline) {
-    process.stdout.write(`${ts} ${s}\x1b[0G`);
-  } else {
-    console.log(`${ts} ${s}`);
-  }
-}
-
-/** writedebug(s)
- * - Logging for debugging purposes
- * @param {string} s String value that we are reporting to the console and to the notifier
- */
-function writedebug(s, from) {
-  console.log(s);
-  if (s) notifier.emit('log', { event: 'debug', text: s, meta: { job: `parser-${from}` } });
-}
-
 /** jobStatus(lineNr, totalLines)
  * - Reports percentage of current parse process
  * @param {number} lineNr Current line number
@@ -62,8 +39,10 @@ function writedebug(s, from) {
  */
 function jobStatus(lineNr, totalLines) {
   const percent = parseInt((lineNr / totalLines) * 100);
-  writeout(`Job at: ${percent}%`, 0);
-  notifier.emit('log', { event: 'progress', text: `Job at: ${percent}%`, meta: { job: 'parser-jobStatus', status: percent } });
+  if (isNaN(percent))
+    return notifier.debug({ event: 'error', text: `Can't calculate percent: lineNr is ${lineNr} and totalLines is ${totalLines}`, meta: { job: 'parser-jobStatus', status: 'error' } });
+
+  notifier.progress({ event: 'progress', text: `Job at: ${percent}%`, meta: { job: 'parser-jobStatus', status: percent } });
 }
 
 /** countLines(inputFile, getMeta)
@@ -79,19 +58,10 @@ function countLines(inputFile, getMeta) {
     let firstDate = null;
     let lastLine = null;
     let lastDate = null;
-
-    if (inputFile == '../_mats/logs/all-au.log') {
-      return resolve({ lines: 14704899, firstLine, lastLine, firstDate, lastDate }); // all-au.log = 14704899
-    } else if (inputFile == '../_mats/logs/all-hr.log' || inputFile == '..\\_mats\\logs\\all-hr.log') {
-      return resolve({ lines: 8596124, firstLine, lastLine, firstDate, lastDate }); // all-hr.log = 8596124
-    }
-
     let num = 0;
     let file;
-    const report = setInterval(() => {
-      writeout(`Total of ${num} lines detected.`, 1);
-      notifier.emit('log', { event: 'progress', text: `Total of ${num} lines detected.`, meta: { job: 'parser-countLines', status: num } });
-    }, 500);
+
+    const report = setInterval(() => notifier.progress({ event: 'progress', text: `Total of ${num} lines detected.`, meta: { job: 'parser-countLines', status: num } }), 500);
 
     file = new LineByLineReader(inputFile);
 
@@ -115,8 +85,7 @@ function countLines(inputFile, getMeta) {
     });
     file.on('end', () => {
       clearInterval(report);
-      writeout(`Total of ${num} lines detected. (${path.basename(inputFile)})`);
-      notifier.emit('log', { event: 'info', text: `Total of ${num} lines detected. (${path.basename(inputFile)})`, meta: { job: 'parser-countLines', status: 'end' } });
+      notifier.log({ event: 'info', text: `Total of ${num} lines detected. (${path.basename(inputFile)})`, meta: { job: 'parser-countLines', status: 'end' } });
       return resolve({ lines: num, firstLine, lastLine, firstDate, lastDate });
     });
   });
@@ -151,17 +120,16 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
       else out_s = '';
       out_s += p[0].id;
     }
-    writedebug();
-    writedebug(`[${currentInvocation}] invoking this function for the ${currentInvocation}. time`, 'matchLine');
-    writedebug(`[${currentInvocation}] pointer has ${out_i} members: ${out_s}`, 'matchLine');
-    writedebug(`[${currentInvocation}] ${lineNr} ${line}`, 'matchLine');
+    notifier.debug({ event: 'debug', text: `[${currentInvocation}] invoking this function for the ${currentInvocation}. time`, meta: { job: 'parser-matchLine', status: 'debugger' } });
+    notifier.debug({ event: 'debug', text: `[${currentInvocation}] pointer has ${out_i} members: ${out_s}`, meta: { job: 'parser-matchLine', status: 'debugger' } });
+    notifier.debug({ event: 'debug', text: `[${currentInvocation}] ${lineNr} ${line}`, meta: { job: 'parser-matchLine', status: 'debugger' } });
   }
 
   let pointerIndex = 0;
   for (const [pointer, pointerCopy] of po.configPointer.entries()) {
     if (checkIndex) if (pointerIndex < checkIndex) continue; // in recursion, we want to check only previously unchecked lines
-    if (debug) writedebug(`[${currentInvocation}] checking siblings of ${pointer[0].id} for match...`, 'matchLine');
-    if (debug) writedebug(`[${currentInvocation}] pointerIndex = ${pointerIndex}, checkIndex = ${checkIndex}`, 'matchLine');
+    if (debug) notifier.debug({ event: 'debug', text: `[${currentInvocation}] checking siblings of ${pointer[0].id} for match...`, meta: { job: 'parser-matchLine', status: 'debugger' } });
+    if (debug) notifier.debug({ event: 'debug', text: `[${currentInvocation}] pointerIndex = ${pointerIndex}, checkIndex = ${checkIndex}`, meta: { job: 'parser-matchLine', status: 'debugger' } });
     for (const item of pointer) {
       if (item.match.test(line)) {
         item.count++;
@@ -183,13 +151,14 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
 
   if (checkIndex) return matched; // in recursion, we want to stop here
 
-  if (debug) writedebug(`[${currentInvocation}] after sibling search matched is ${matched ? matched.id : !!matched}`, 'matchLine');
+  if (debug)
+    notifier.debug({ event: 'debug', text: `[${currentInvocation}] after sibling search matched is ${matched ? matched.id : !!matched}`, meta: { job: 'parser-matchLine', status: 'debugger' } });
 
   if (!matched) {
     let i = 0;
     for (const [pointer, pointerCopy] of po.configPointer.entries()) {
       // if (checkIndex) if (pointerIndex < checkIndex) continue; // in recursion, we want to check only previously unchecked lines
-      if (debug) writedebug(`[${currentInvocation}] Checking for parents pointer: ${pointer[0].id}`, 'matchLine');
+      if (debug) notifier.debug({ event: 'debug', text: `[${currentInvocation}] Checking for parents pointer: ${pointer[0].id}`, meta: { job: 'parser-matchLine', status: 'debugger' } });
       if (pointer[0] && pointer[0].parent) {
         if (pointer[0].parent.parent) {
           po.configPointer.add(pointer[0].parent.parent.children);
@@ -204,14 +173,18 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
     matched = i ? matchLine(line, lineNr, po, i) : false;
   }
 
-  if (debug) writedebug(`[${currentInvocation}] after recursion matched is ${matched ? matched.id : !!matched}`, 'matchLine');
+  if (debug) notifier.debug({ event: 'debug', text: `[${currentInvocation}] after recursion matched is ${matched ? matched.id : !!matched}`, meta: { job: 'parser-matchLine', status: 'debugger' } });
 
   if (!matched) {
-    if (debug) writedebug(`[${currentInvocation}] ${lineNr} unseen line: ${line}`, 'matchLine');
+    if (debug) notifier.debug({ event: 'debug', text: `[${currentInvocation}] ${lineNr} unseen line: ${line}`, meta: { job: 'parser-matchLine', status: 'debugger' } });
   } else {
     if (fns[matched.act]) {
       // console.log(`${matched.id} -> ${matched.act}`);
-      fns[matched.act](line, matched, po);
+      try {
+        fns[matched.act](line, matched, po);
+      } catch (error) {
+        notifier.debug({ event: 'error', text: JSON.stringify(error), meta: { job: 'parser-matchLine', status: 'error' } });
+      }
     }
   }
 
@@ -226,6 +199,10 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
  */
 function parseFile(inputFile, po) {
   return new Promise((resolve, reject) => {
+    console.log();
+    console.log('Parsing started');
+    console.log(inputFile);
+    console.log();
     const file = new LineByLineReader(inputFile.path, { encoding: 'utf8' });
     let lineNr = 0;
     const report = setInterval(() => {
@@ -238,7 +215,10 @@ function parseFile(inputFile, po) {
       const result = matchLine(line, lineNr, po);
       if (!result) matchLine(line, lineNr, po, undefined, true);
     });
-    file.on('error', error => reject(error));
+    file.on('error', error => {
+      clearInterval(report);
+      reject(error);
+    });
     file.on('end', () => {
       clearInterval(report);
       jobStatus(lineNr, inputFile.lines);
@@ -254,14 +234,14 @@ function parseFile(inputFile, po) {
  */
 async function main(inputFolder) {
   const files = await getFiles(inputFolder);
-  writeout('Collecting file metadata...');
-  notifier.emit('log', { event: 'info', text: 'Collecting file metadata...', meta: { job: 'parser-main', status: 'start metadataCollecting' } });
+  notifier.log({ event: 'info', text: 'Collecting file metadata...', meta: { job: 'parser-main', status: 'start metadataCollecting' } });
 
   try {
     const missing = [];
     for (const file of files) {
       if (!po.file.has(file.hash)) {
-        const result = await countLines(file.path, true);
+        notifier.progress({ event: 'start', text: `Gathering metadata for new file ${file.name} (${file.hash})`, meta: { job: 'parser-main', status: 'start metadataCollectingFileNew' } });
+        const result = await countLines(file.path, true).catch(err => {});
         file.lines = result.lines;
         file.firstDate = result.firstDate;
         file.firstLine = result.firstLine;
@@ -269,47 +249,68 @@ async function main(inputFolder) {
         file.lastLine = result.lastLine;
         missing.push({ hash: file.hash, ...result });
         po.file.set(file.hash, { hash: file.hash, ...result });
+        notifier.progress({ event: 'end', text: `Gathered metadata for new file ${file.name} (${file.hash})`, meta: { job: 'parser-main', status: 'end metadataCollectingFileNew' } });
+      } else {
+        notifier.debug({ event: 'debug', text: `Setting metadata for known file ${file.name} (${file.hash})`, meta: { job: 'parser-main', status: 'start metadataCollectingFileOld' } });
+        file.lines = po.file.get(file.hash).lines;
+        file.firstDate = po.file.get(file.hash).firstDate;
+        file.firstLine = po.file.get(file.hash).firstLine;
+        file.lastDate = po.file.get(file.hash).lastDate;
+        file.lastLine = po.file.get(file.hash).lastLine;
       }
     }
     if (missing.length) writeFiles(missing);
   } catch (error) {
-    console.log(error);
-    notifier.emit('log', { event: 'error', text: JSON.stringify(error), meta: { job: 'parser-main', status: 'error writeFiles' } });
+    // TODO - handle error! - skip file?
+    // - possible error: countLines - can return reject
+    notifier.log({ event: 'error', text: JSON.stringify(error), meta: { job: 'parser-main', status: 'error writeFiles' } });
     return error;
   }
 
-  writeout('Started parsing files...');
-  notifier.emit('log', { event: 'info', text: 'Started parsing files...', meta: { job: 'parser-main', status: 'start parsing' } });
+  notifier.log({ event: 'info', text: 'Started parsing files...', meta: { job: 'parser-main', status: 'start parsing' } });
 
   // TODO - make startDate constructable by user
   if (!po.rule.startDate) po.rule.startDate = constructStartDate();
 
+  let i = 0;
+  const j = files.length;
+
   for (const file of files) {
-    if (file.lastDate < po.rule.startDate) {
-      writeout(`Skipping ${file.name} because file.lastDate (${croDate(file.lastDate)}) < rule.startDate (${croDate(po.rule.startDate)})`);
-      notifier.emit('log', {
-        event: 'info',
-        text: `Skipping ${file.name} because file.lastDate (${croDate(file.lastDate)}) < rule.startDate (${croDate(po.rule.startDate)})`,
-        meta: { job: 'parser-main', status: 'skip parsingFile' }
-      });
-      continue;
-    }
-
-    writeout(`Parsing ${file.name}`);
-    notifier.emit('log', { event: 'info', text: `Parsing ${file.name}`, meta: { job: 'parser-main', status: 'start parsingFile' } });
+    // if (file.lastDate < po.rule.startDate) {
+    //   notifier.log({
+    //     event: 'info',
+    //     text: `Skipping ${file.name} because file.lastDate (${croDate(file.lastDate)}) < rule.startDate (${croDate(po.rule.startDate)})`,
+    //     meta: { job: 'parser-main', status: 'skip parsingFile' }
+    //   });
+    //   continue;
+    // }
+    i++;
+    notifier.progress({ event: 'start', text: `Parsing file ${i} of ${j} total files.`, meta: { job: 'parser-main', status: 'job' } });
+    notifier.log({ event: 'info', text: `Parsing ${file.name}`, meta: { job: 'parser-main', status: 'start parsingFile' } });
     // TODO: test if we already parsed this file
+    notifier.progress({ event: 'start', text: `Started parsing ${file.name}`, meta: { job: 'parser-main', status: 'file' } });
     await parseFile(file, po);
+    notifier.progress({ event: 'end', text: `Completed parsing ${file.name}`, meta: { job: 'parser-main', status: 'file' } });
     for (const key in po.output) {
-      if (po.output[key].length) writedebug(`[${key}]: ${po.output[key].length}`, 'main');
+      if (po.output[key].length) notifier.debug({ event: 'debug', text: `po.output.${key}: ${po.output[key].length}`, meta: { job: 'parser-main', status: 'po.output not empty' } });
     }
 
-    digestAll(po);
+    const results = digestAll(po);
+    let report = `File ${file.name} report: `;
+    report = report + ` names: [${results.names.collected} => ${results.names.written}]`;
+    report = report + ` days: [${results.days.collected} => ${results.days.written}]`;
+    report = report + ` pObj: [${results.pObj.collected} => ${results.pObj.written}]`;
+    report = report + ` pImg: [${results.pImg.collected} => ${results.pImg.written}]`;
+    report = report + ` pIns: [${results.pIns.collected} => ${results.pIns.written}]`;
+    report = report + ` route: [${results.route.collected} => ${results.route.written}]`;
+    report = report + ` purge: [${results.purge.collected} => ${results.purge.written}]`;
 
+    notifier.log({ event: 'info', text: report, meta: { job: 'parser-main', status: 'end parsingFile' } });
     // console.log(`po is roughly ${fileSizeSI(roughSizeOfObject(po))}`);
   }
 
-  writeout('Done.');
-  notifier.emit('log', { event: 'info', text: 'Done.', meta: { job: 'parser-main', status: 'end' } });
+  notifier.log({ event: 'info', text: 'Done.', meta: { job: 'parser-main', status: 'end' } });
+  notifier.progress({ event: 'end', text: `Parsed ${j} total files.`, meta: { job: 'parser-main', status: 'job' } });
   return true;
   // console.log(postWork().reduce((r, c) => Object.assign(r, c), {}));
 }
@@ -342,7 +343,6 @@ const digestAll = po => {
 const digestNames = po => {
   const result = writeNames(po.names);
   const names = { collected: po.names.size, written: result.reduce((acc, val) => acc + val.changes, 0) };
-  writedebug(`Collected ${names.collected} names, written ${names.written} in db.`, 'digestNames');
   po.names.clear();
   return { names };
 };
@@ -355,7 +355,6 @@ const digestNames = po => {
 const digestDays = po => {
   const result = writeDays(po.days);
   const days = { collected: po.days.size, written: result.reduce((acc, val) => acc + val.changes, 0) };
-  writedebug(`Collected ${days.collected} days, written ${days.written} in db.`, digestDays);
   po.days.clear();
   return { days };
 };
@@ -381,11 +380,8 @@ const digestImages = po => {
       written: result.pIns.reduce((acc, val) => acc + val.changes, 0)
     }
   };
-  writedebug(`Collected ${po.output.pObj.length} objects, written ${result.pObj.reduce((acc, val) => acc + val.changes, 0)} in db.`, 'digestImages');
   po.output.pObj = [];
-  writedebug(`Collected ${po.output.pImg.length} images, written ${result.pImg.reduce((acc, val) => acc + val.changes, 0)} in db.`, 'digestImages');
   po.output.pImg = [];
-  writedebug(`Collected ${po.output.pIns.length} inspects, written ${result.pIns.reduce((acc, val) => acc + val.changes, 0)} in db.`, 'digestImages');
   po.output.pIns = [];
   return images;
 };
@@ -398,7 +394,6 @@ const digestImages = po => {
 const digestRoutes = po => {
   const result = writeRoutes(po.output.route);
   const route = { collected: po.output.route.length, written: result.reduce((acc, val) => acc + val.changes, 0) };
-  writedebug(`Collected ${route.collected} routes, written ${route.written} in db.`, 'digestRoutes');
   po.output.route = [];
   return { route };
 };
@@ -411,7 +406,6 @@ const digestRoutes = po => {
 const digestPurges = po => {
   const result = writePurges(po.output.purge);
   const purge = { collected: po.output.purge.length, written: result.reduce((acc, val) => acc + val.changes, 0) };
-  writedebug(`Collected ${purge.collected} purges, written ${purge.written} in db.`, 'digestPurges');
   po.output.purge = [];
   return { purge };
 };
@@ -433,4 +427,4 @@ function postWork(array, parent) {
   return output;
 }
 
-module.exports = main;
+export default main;
