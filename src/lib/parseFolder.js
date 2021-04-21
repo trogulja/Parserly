@@ -183,6 +183,8 @@ function matchLine(line, lineNr, po, checkIndex = null, debug = false) {
       try {
         fns[matched.act](line, matched, po);
       } catch (error) {
+        console.log('Error in actions!');
+        console.log(error);
         notifier.debug({ event: 'error', text: JSON.stringify(error), meta: { job: 'parser-matchLine', status: 'error' } });
       }
     }
@@ -234,7 +236,8 @@ function parseFile(inputFile, po) {
  */
 async function main(inputFolder) {
   const files = await getFiles(inputFolder);
-  notifier.log({ event: 'info', text: 'Collecting file metadata...', meta: { job: 'parser-main', status: 'start metadataCollecting' } });
+  // console.log(files);
+  notifier.log({ event: 'info', text: `Found ${files.length} files in ${inputFolder} folder`, meta: { job: 'parser-main', status: 'end getFiles' } });
 
   try {
     const missing = [];
@@ -265,6 +268,20 @@ async function main(inputFolder) {
     // - possible error: countLines - can return reject
     notifier.log({ event: 'error', text: JSON.stringify(error), meta: { job: 'parser-main', status: 'error writeFiles' } });
     return error;
+  }
+
+  // Sanity check
+  if (files.length) {
+    const badFiles = files.filter(f => typeof f.firstDate !== 'number' && f.firstDate < new Date(2010, 0, 1).getTime());
+    if (badFiles.length) {
+      for (const bf of badFiles) {
+        notifier.log({ event: 'error', text: `BadFile: ${bf.name} (${bf.humanSize}) - no firstDate!`, meta: { job: 'parser-main', status: 'sanity check' } });
+      }
+    }
+    // sort by firstDate ascending order
+    files.sort((a, b) => a.firstDate - b.firstDate);
+  } else {
+    notifier.log({ event: 'error', text: 'There are no files to process in target directory! Wrong target?', meta: { job: 'parser-main', status: 'sanity check' } });
   }
 
   notifier.log({ event: 'info', text: 'Started parsing files...', meta: { job: 'parser-main', status: 'start parsing' } });

@@ -34,22 +34,23 @@ class Notifier extends EventEmitter {
   log(message) {
     const time = this.getTime();
     console.log(`[${time}] ${message.event}: ${message.text}`);
-    return this.emit('log', message);
+    return this.emit('log', { time, ...message });
   }
 
   debug(message) {
     const time = this.getTime();
     console.log(`DEBUG [${time}] ${message.event}: ${message.text}`);
-    return this.emit('debug', message);
+    return this.emit('debug', { time, ...message });
   }
 
   progress(message) {
-    // const time = this.getTime();
+    const time = this.getTime();
     // console.log(`PROGRESS [${time}] ${message.event}: ${message.text}`);
     // TODO - figure out if we can replace process.stdout with something else
     // process.stdout.write(`[${time}] ${message.event}: ${message.text}\x1b[0G`);
-    return this.emit('progress', message);
+    return this.emit('progress', { time, ...message });
   }
 }
 
-export default new Notifier();
+const notifier = new Notifier();
+export default notifier;

@@ -43,45 +43,14 @@ async function getFiles(dir) {
   const rawContents = await fs.readdir(dir);
   const files = await Promise.all(
     rawContents
-      .filter(file => claroFiles.test(file))
-      .map(async file => {
-        const fullpath = path.resolve(dir, file);
-        const status = await fs.stat(fullpath);
-        return {
-          path: fullpath,
-          hash: createHashFromFile(fullpath),
-          name: file,
-          dir: path.resolve(dir),
-          size: status.size,
-          humanSize: fileSizeSI(status.size),
-          t_created: Math.floor(status.birthtimeMs),
-          t_modified: Math.floor(status.mtimeMs),
-          t_changed: Math.floor(status.ctimeMs),
-          t_accessed: Math.floor(status.atimeMs)
-        };
-      })
-      .reverse()
-  );
-  return files;
-}
-
-/** getFiles2(dir)
- * - Reads files from dir - test files, they are in correct order
- * @param {string} dir path to directory
- * @return {Array.<FileObject>}
- */
-async function getFiles2(dir) {
-  const rawContents = await fs.readdir(dir);
-  const files = await Promise.all(
-    rawContents
-      .filter(file => claroFiles2.test(file))
+      .filter(file => claroFiles.test(file) || claroFiles2.test(file))
       .map(async file => {
         const fullpath = path.resolve(dir, file);
         const status = await fs.stat(fullpath);
         const hash = await createHashFromFile(fullpath);
         return {
           path: fullpath,
-          hash: hash,
+          hash,
           name: file,
           dir: path.resolve(dir),
           size: status.size,
@@ -99,15 +68,14 @@ async function getFiles2(dir) {
 /** createHashFromFile(filePath)
  * - Creates sha1 hash from the file
  * @param {string} filePath path to file
- * @returns {string} sha1 hash of the file
+ * @returns {Promise.<string>} sha1 hash of the file
  */
 const createHashFromFile = filePath =>
-  new Promise(resolve => {
+  new Promise((resolve, reject) => {
     const hash = crypto.createHash('sha1');
     createReadStream(filePath)
       .on('data', data => hash.update(data))
       .on('end', () => resolve(hash.digest('hex')));
   });
 
-module.exports = getFiles2;
-// getFiles2('../../_mats/logs/HR').then(console.log);
+module.exports = getFiles;

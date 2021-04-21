@@ -23,7 +23,7 @@
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
-const paths = { root: '', db: '', logs: null };
+const paths = { root: '', db: '', logs: null, express: null };
 
 let appType = 'production';
 if (process.execPath.search('electron.exe') >= 0) appType = 'development';
@@ -61,6 +61,7 @@ if (!paths.logs) {
 
 if (appType === 'production') {
   paths.root = path.join(path.dirname(process.execPath), 'resources');
+  paths.express = path.join(path.dirname(process.execPath), 'resources', 'app.asar', 'express');
 } else if (appType === 'development' || appType == 'testing') {
   let frag = __dirname.split(path.sep);
   let searchable = false;
@@ -71,8 +72,10 @@ if (appType === 'production') {
   if (searchable) frag.length = frag.indexOf(searchable);
   else throw new Error(`Path is unexpected, check it: ${__dirname}`);
   paths.root = path.join(...frag);
+  paths.express = path.join(paths.root, 'public', 'express');
 } else if (appType === 'installed') {
   paths.root = app.getPath('userData');
+  paths.express = path.join(path.dirname(process.execPath), 'resources', 'app.asar', 'express');
 }
 
 paths.db = path.join(paths.root, 'db');

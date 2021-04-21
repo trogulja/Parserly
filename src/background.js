@@ -33,6 +33,11 @@ if (isDevelopment) {
     label: 'Developer Tools',
     submenu: [{ role: 'toggledevtools' }, { role: 'reload' }]
   });
+} else {
+  mainMenuTemplate.push({
+    label: 'Developer Tools',
+    submenu: [{ role: 'toggledevtools' }, { role: 'reload' }]
+  });
 }
 
 async function createWindow() {
@@ -128,6 +133,7 @@ if (isDevelopment) {
 }
 
 // Logs
+const reportIssues = false;
 if (!isDevelopment) {
   Object.assign(console, log.functions);
   log.transports.file.level = 'debug';
@@ -171,7 +177,7 @@ log.catchErrors({
       .then(result => {
         log.error('Error (' + error.message + '):\n```' + error.stack + '\n```\n' + `OS: ${versions.os}` + '\n```App: ' + versions.app);
 
-        if (result.response === 1) {
+        if (result.response === 1 && reportIssues) {
           submitIssue('https://github.com/trogulja/Parserly/issues/new', {
             title: `Error report for ${versions.app}`,
             body: 'Error:\n```' + error.stack + '\n```\n' + `OS: ${versions.os}`
@@ -182,7 +188,8 @@ log.catchErrors({
         if (result.response === 2) {
           electron.app.quit();
         }
-      });
+      })
+      .catch(error => log.error('Error (' + error.message + '):\n```' + error.stack + '\n```\n' + `OS: ${versions.os}` + '\n```App: ' + versions.app));
   }
 });
 
@@ -206,6 +213,7 @@ ipcMain.on('job', async function(event, arg) {
   if (arg === 'start') {
     CronController.start();
     win.webContents.send('job', 'started');
+    console.log({ paths });
     notifier.log({ event: 'log', text: `Target folder is ${paths.logs}`, meta: { job: 'ipcMain-on-job', status: 'event' } });
     notifier.log({ event: 'log', text: `Target db is ${paths.database}`, meta: { job: 'ipcMain-on-job', status: 'event' } });
   }
@@ -223,16 +231,15 @@ import express from 'express';
 import cors from 'cors';
 const paths = require('./lib/util/pathHandler');
 const httpd = express();
-const httpdPublicDir = path.join(paths.root, 'public', 'express');
 
 httpd.use(express.json({ limit: '10MB' }));
 httpd.use(cors());
 
 httpd.use('/api/data', require('./api/data'));
-httpd.use(express.static(httpdPublicDir));
+httpd.use(express.static(paths.express));
 httpd.get(/.*/, (req, res) => {
-  console.log('Sending SPA index.html from', path.join(httpdPublicDir, 'index.html'));
-  return res.sendFile(path.join(httpdPublicDir, 'index.html'));
+  console.log('Sending SPA index.html from', path.join(paths.express, 'index.html'));
+  return res.sendFile(path.join(paths.express, 'index.html'));
 });
 
 const httpdPort = 8125;
