@@ -20,7 +20,8 @@
     "sqlite": "cross-env SKIP_POSTINSTALL=0 electron-rebuild -f -w better-sqlite3",
     "sqlite-reset": "cross-env SKIP_POSTINSTALL=1 yarn add better-sqlite3",
     "webpack:help": "webpack --help",
-    "webpack:showerror": "webpack --display-error-details"
+    "webpack:showerror": "webpack --display-error-details",
+    "deploy": "cross-env SKIP_POSTINSTALL=0 powershell ./deploy.ps1"
   },
   "main": "background.js",
   "dependencies": {
@@ -102,10 +103,8 @@
   "publish": [
     {
       "provider": "github",
-      "private": true,
       "owner": "trogulja",
       "repo": "Parserly",
-      "token": "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",
       "releaseType": "draft"
     }
   ],

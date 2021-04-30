@@ -93,6 +93,8 @@ export default {
     });
     window.ipcRenderer.on('log', function(event, arg) {
       if (arg.event === 'progress') return;
+      if (!arg.event) return console.log(arg);
+      if (!thisclass.icons[arg.event]) return console.log(arg);
       thisclass.logs.unshift(arg);
       if (thisclass.logs.length > 30) thisclass.logs.length = 30;
     });
@@ -118,7 +120,7 @@ export default {
         thisclass.progressTotalCurrent = Number(/file (\d+)/i.exec(arg.text)[1]);
         thisclass.progressTotalAll = Number(/of (\d+) total/i.exec(arg.text)[1]);
         thisclass.progressTotalActive = true;
-        thisclass.progressTotal = thisclass.progressTotalCurrent / thisclass.progressTotalAll * 100;
+        thisclass.progressTotal = (thisclass.progressTotalCurrent / thisclass.progressTotalAll) * 100;
         console.log('Progress total start received!');
         return;
       }
@@ -135,7 +137,7 @@ export default {
     setTimeout(() => {
       thisclass.loading = true;
       thisclass.crontab = true;
-      window.ipcRenderer.send('job', 'stop');
+      window.ipcRenderer.send('job', 'start');
     }, 500);
   },
 

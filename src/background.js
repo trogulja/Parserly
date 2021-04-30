@@ -214,8 +214,8 @@ ipcMain.on('job', async function(event, arg) {
     CronController.start();
     win.webContents.send('job', 'started');
     console.log({ paths });
-    notifier.log({ event: 'log', text: `Target folder is ${paths.logs}`, meta: { job: 'ipcMain-on-job', status: 'event' } });
-    notifier.log({ event: 'log', text: `Target db is ${paths.database}`, meta: { job: 'ipcMain-on-job', status: 'event' } });
+    notifier.log({ event: 'info', text: `Target folder is ${paths.logs}`, meta: { job: 'ipcMain-on-job', status: 'event' } });
+    notifier.log({ event: 'info', text: `Target db is ${paths.database}`, meta: { job: 'ipcMain-on-job', status: 'event' } });
   }
   if (arg === 'stop') {
     CronController.stop();
@@ -236,6 +236,7 @@ httpd.use(express.json({ limit: '10MB' }));
 httpd.use(cors());
 
 httpd.use('/api/data', require('./api/data'));
+httpd.use('/api/compiley', require('./api/compiley'));
 httpd.use(express.static(paths.express));
 httpd.get(/.*/, (req, res) => {
   console.log('Sending SPA index.html from', path.join(paths.express, 'index.html'));
