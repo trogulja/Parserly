@@ -123,10 +123,13 @@ CREATE TABLE IF NOT EXISTS config (
 
 -- Index: name_index, days_combo_index, files_hash_index
 CREATE INDEX IF NOT EXISTS name_index ON names (name);
-
 CREATE INDEX IF NOT EXISTS days_combo_index ON days (combo);
-
 CREATE INDEX IF NOT EXISTS files_hash_index ON files (hash);
+CREATE INDEX IF NOT EXISTS pImg_t_start_index ON pImg (t_start);
+CREATE INDEX IF NOT EXISTS pIns_t_start_index ON pIns (t_start);
+CREATE INDEX IF NOT EXISTS pImg_channelName_index ON pImg (channelName);
+CREATE INDEX IF NOT EXISTS pImg_imageName_index ON pImg (imageName);
+CREATE INDEX IF NOT EXISTS pImg_inspectID_index ON pImg (inspectID);
 
 COMMIT TRANSACTION;
 

@@ -4,7 +4,7 @@ const LineByLineReader = require('line-by-line');
 const getFiles = require('./getFiles');
 const config = require('./config');
 const fns = require('./actions');
-const { writeNames, writeDays, writeImages, writeRoutes, writePurges } = require('./db/tools');
+const { writeNames, writeDays, writeImages, writeRoutes, writePurges, houseKeeping } = require('./db/tools');
 const writeFiles = require('./db/writeFiles');
 import notifier from './util/notifier';
 /** @typedef {import('./passableObject').PassableObject} PassableObject */
@@ -328,6 +328,9 @@ async function main(inputFolder) {
 
   notifier.log({ event: 'info', text: 'Done.', meta: { job: 'parser-main', status: 'end' } });
   notifier.progress({ event: 'end', text: `Parsed ${j} total files.`, meta: { job: 'parser-main', status: 'job' } });
+
+  const hkInfo = houseKeeping();
+  notifier.log({ event: 'info', text: `Performed housekeeping on ${hkInfo} db records.`, meta: { job: 'parser-main', status: 'post end' } });
   return true;
   // console.log(postWork().reduce((r, c) => Object.assign(r, c), {}));
 }
